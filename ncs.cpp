@@ -8,7 +8,7 @@
  */
 #include "holooj.h"
 #include "ncs.hpp"
-#include "ny2.h"
+#include "ny2.hpp"
 
 #include <time.h>
 #include <cstdio>
@@ -334,6 +334,7 @@ int NCS::destroy_movidius() {
     REPORT(retCode = ncGraphDestroy(&graph_handle), er, "");
     REPORT(retCode = ncDeviceClose(dev_handle), er, "");
     REPORT(retCode = ncDeviceDestroy(&dev_handle), er, "");
+    return 0;
 }
 
 NCS::~NCS() {

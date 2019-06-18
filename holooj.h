@@ -5,6 +5,58 @@ typedef unsigned char byte;
 typedef const int error;
 
 
+
+typedef struct Box{
+    float x, y, w, h;
+} Box;
+
+typedef struct bbox{
+    Box box;
+    float objectness;
+    float prob;
+    int cindex;
+} bbox;
+
+typedef enum {
+	NCSNN_YOLOv2
+} NCSNNType;
+
+typedef struct detection{
+    Box bbox;
+    int classes;
+    float *prob;
+    float objectness;
+    int sort_class;
+} detection;
+
+typedef struct nnet {
+	char name[10];
+    NCSNNType type;
+    float thresh;
+    int in_w;
+    int in_h;
+    int in_c;
+    int im_cols;
+    int im_rows;
+    int out_w;
+    int out_h;
+    int out_z;
+    int nbbox;
+    int nbbox_total;
+    int ncoords;
+    int nclasses;
+    int nanchors;
+    int input_size_byte;
+    int output_size_byte;
+    char *classes_buffer;
+    char **classes;
+    float *anchors;
+    float *output;
+    float *input;
+    detection *dets;
+    bbox *bboxes;
+} nnet;
+
 #define RE( expr, msg, ... )\
     if((expr) < 0) {\
         printf("\n[%s::%d] error: "msg" [%d=%s].\n\n",\

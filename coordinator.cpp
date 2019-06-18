@@ -28,7 +28,6 @@
 
 #include "holooj.h"
 #include "coordinator.hpp"
-// #include "socket.hpp"
 #include "ncs.hpp"
 
 typedef enum PckError {
@@ -98,7 +97,7 @@ int Coordinator::startServer() {
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(port);
 
-	if(getAddress(&server_addr.sin_addr, iface.c_str)) return -1;
+	if(getAddress(&server_addr.sin_addr, iface.c_str())) return -1;
 
 	ret = bind(this->fd_server, (struct sockaddr *) &server_addr, sizeof(server_addr));
 	REPORT_ERRNO(0 > ret, SOBind, "");
@@ -121,8 +120,8 @@ int Coordinator::waitPiAndUy() {
 	REPORT_ERRNO(12 != r, SORecv, "");
 
 	id1 = *((int*) buf);
-	imcols = *((int*) buf[4]);
-	imrows = *((int*) buf[8]);
+	imcols = *((int*) &buf[4]);
+	imrows = *((int*) &buf[8]);
 	imsize = imrows*imcols;
 
 	this->fd_uy = accept(this->fd_server, (struct sockaddr *)&pi_addr, (socklen_t*)&addrlen);
@@ -167,7 +166,7 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
     FILE *f = fopen(filename, "wb");
     REPORT(f == NULL, GenericFile, "(fopen error)");
     ret = fwrite(imj, 1, imjl, f);
-    REPORT(ret < imjl, GenericFile, "(fwrite error: %d instead of %lu)", ret, imjl);
+    REPORT(ret < (int) imjl, GenericFile, "(fwrite error: %d instead of %lu)", ret, imjl);
     REPORT(fclose(f), GenericFile, "(fclose error)");
 
 	tjFree(imj);
@@ -177,7 +176,7 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
 }
 
 
-void Coordinator::drawBbox(byte *im, box b, byte color[3]) {
+void Coordinator::drawBbox(byte *im, Box b, byte color[3]) {
     int w = imcols;
     int h = imrows;
 
@@ -238,11 +237,15 @@ void Coordinator::drawBbox(byte *im, box b, byte color[3]) {
 
 
 int Coordinator::undistortImage() {
-	
+	return 0;
 }
 
 int Coordinator::elaborate() {
-	int nbbox, imlength;
+	int nbbox;
+	if(!isBMP) {
+		int ret = decode_jpeg(rpacket->image, rpacket->l, imraw);
+		REPORT(ret, ImJpegDecoding, "Jpeg decoding failed.");
+	}
 
 	nbbox = ncs->inference_byte(imraw, 3);
 
@@ -420,52 +423,4 @@ int Coordinator::closeSockets() {
 	if(ret < 0) printf("Error during closing server socket.");
 
 	return ret;
-}
-
-int main (int argc, char** argv) {
-    
-	setvbuf(stdout, NULL, _IONBF, 0);
-
-
-    char *graph = "./yolov2/original/yolov2-tiny-original.graph";
-    char *meta = "./yolov2/original/yolov2-tiny-original.meta";
-    char *iface = "wlan0";
-    unsigned int port = 56789;
-
-
-	int r;
-	srand(time(0)); 
-	r = rand() % 1000;
-	port = r + 50000;
-
-	port = 56789;
-
-	if(argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
-		printf("HoloOj for Raspberry.\n\t--graph\t\t\tthe path to the graph file.\n\t--meta\t\t\tthe path to the meta file.\n\t--iface\t\t\tthe network interface to use.\n\t--help, -h\t\tthis help.\n");
-		exit(0);
-	}
-
-	if(argc >= 3) {
-		for(int i = 1; i < argc; i++) {
-			if(!strcmp(argv[i], "--iface")) {
-				iface = argv[i+1];
-			}
-			if(!strcmp(argv[i], "--graph")) {
-				graph = argv[i+1];
-			}
-			if(!strcmp(argv[i], "--meta")) {
-				meta  = argv[i+1];
-			}
-			if(!strcmp(argv[i], "--port")) {
-				port  = atoi(argv[i+1]);
-			}
-		}
-	}
-
-
-    printf("HoloOj for Raspberry:\n\t%6s = %s\n\t%6s = %u\n\t%6s = %s\n\t%6s = %s\n",
-	"iface", iface, "port", port, "graph", graph, "meta", meta);
-
-    run(iface, graph, meta, port);
-
 }

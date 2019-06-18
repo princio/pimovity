@@ -3,8 +3,11 @@
 # ARCH= -gencode arch=compute_52,code=compute_52
 
 #OPENCV=1
-SOCKET=1
-NCS=1
+#only for linker
+# ifdef OPENCV
+#   COMMON += -DOPENCV `pkg-config --cflags opencv`
+#   LDFLAGS += `pkg-config --libs opencv` -lstdc++
+# endif
 
 CC=gcc
 CPP=g++
@@ -14,48 +17,24 @@ COMMON=-Iinclude/ -I.
 
 #only for compiler
 CFLAGS=-Wall -Wno-unused-result -Wno-unknown-pragmas -Wfatal-errors -O0 -g
-#only for linker
+CPPFLAGS=-std=c++11
 LDFLAGS= -lmvnc -lm -ljpeg -lturbojpeg 
-ifdef OPENCV
-  COMMON += -DOPENCV `pkg-config --cflags opencv`
-  LDFLAGS += `pkg-config --libs opencv` -lstdc++
-endif
-ifdef SOCKET
-	COMMON += -DSOCKET
-endif
-ifdef NCS
-	COMMON += -DNCS
-endif
-
-CFLAGS+=$(OPTS)
-
-OBJDIR=./debug/objs/
 
 EXEC=./debug/gengi
-OBJ=ncs.o ny2.o  socket.o  main.o#image_opencv.o
-
-OBJS = $(addprefix $(OBJDIR), $(OBJ))
-DEPS = $(wildcard ./*.h)
 
 
-all: clean obj $(EXEC)
-#all: obj  results $(SLIB) $(ALIB) $(EXEC)
 
-$(info $(OBJS))
+all: clean gengi
 
-$(EXEC): $(OBJS)
-	$(CC)  $(COMMON) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
-$(OBJDIR)%.o: %.cpp $(DEPS)
-	$(CPP) $(COMMON) $(CFLAGS) -c $< -o $@
+gengi: debug/objs/ncs.o debug/objs/ny2.o debug/objs/coordinator.o debug/objs/main.o
+	$(CPP)  $(COMMON) $(CFLAGS) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)
 
-$(OBJDIR)%.o: %.c $(DEPS)
-	$(CC)  $(COMMON) $(CFLAGS) -c $< -o $@
-
-obj:
-	mkdir -p ./debug/objs/
+debug/objs/%.o: %.cpp
+	$(CPP) $(COMMON) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:
-	rm -rf $(OBJS) $(EXEC)
+	rm -rf debug/objs/* gengi
+	mkdir -p ./debug/objs/
 

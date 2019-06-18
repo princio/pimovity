@@ -29,7 +29,7 @@ float overlap(float x1, float w1, float x2, float w2)
     return right - left;
 }
 
-float box_intersection(box a, box b)
+float box_intersection(Box a, Box b)
 {
     float w = overlap(a.x, a.w, b.x, b.w);
     float h = overlap(a.y, a.h, b.y, b.h);
@@ -38,14 +38,14 @@ float box_intersection(box a, box b)
     return area;
 }
 
-float box_union(box a, box b)
+float box_union(Box a, Box b)
 {
     float i = box_intersection(a, b);
     float u = a.w*a.h + b.w*b.h - i;
     return u;
 }
 
-float box_iou(box a, box b)
+float box_iou(Box a, Box b)
 {
     return box_intersection(a, b)/box_union(a, b);
 }
@@ -87,7 +87,7 @@ void NY2::correct_region_boxes()
         if(this->nn->dets[i].prob[16] > 0.5) {
             printf("\b");
         }
-        box b = this->nn->dets[i].bbox;
+        Box b = this->nn->dets[i].bbox;
         b.x =  (b.x - (netw - new_w)/2./netw) / ((float)new_w/netw); 
         b.y =  (b.y - (neth - new_h)/2./neth) / ((float)new_h/neth); 
         b.w *= (float)netw/new_w;
@@ -125,9 +125,9 @@ void NY2::do_nms_sort()
         qsort(this->nn->dets, total, sizeof(detection), nms_comparator);
         for(i = 0; i < total; ++i){
             if(this->nn->dets[i].prob[k] == 0) continue;
-            box a = this->nn->dets[i].bbox;
+            Box a = this->nn->dets[i].bbox;
             for(j = i+1; j < total; ++j){
-                box b = this->nn->dets[j].bbox;
+                Box b = this->nn->dets[j].bbox;
                 if (box_iou(a, b) > thresh){
                     this->nn->dets[j].prob[k] = 0;
                 }
@@ -136,9 +136,9 @@ void NY2::do_nms_sort()
     }
 }
 
-box NY2::get_region_box(float *x, int n, int index, int i, int j)
+Box NY2::get_region_box(float *x, int n, int index, int i, int j)
 {
-    box b;
+    Box b;
     b.x = (j + EXPIT(x[index])) / this->nn->out_w;
     b.y = (i + EXPIT(x[index+1])) / this->nn->out_h;
     b.w = exp(x[index + 2]) * this->nn->anchors[2*n]   / this->nn->out_w;

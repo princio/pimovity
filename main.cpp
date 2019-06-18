@@ -20,9 +20,9 @@ int main (int argc, char** argv) {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 
-    char *graph = "./yolov2/original/yolov2-tiny-original.graph";
-    char *meta = "./yolov2/original/yolov2-tiny-original.meta";
-    char *iface = "wlan0";
+    const char *graph = "./yolov2/original/yolov2-tiny-original.graph";
+    const char *meta = "./yolov2/original/yolov2-tiny-original.meta";
+    std::string iface = "wlan0";
     unsigned int port = 56789;
 	float thresh = 0.5;
 
@@ -61,10 +61,10 @@ int main (int argc, char** argv) {
 
 
     printf("HoloOj for Raspberry:\n\t%6s = %s\n\t%6s = %u\n\t%6s = %s\n\t%6s = %s\t%6s = %s\n",
-	"iface", iface, "port", port, "graph", graph, "meta", meta, "thresh", meta);
+	"iface", iface.c_str(), "port", port, "graph", graph, "meta", meta, "thresh", meta);
 
 
-	Coordinator coo(iface, port);
+	Coordinator coo(iface.c_str(), port);
 
 
     coo.run(graph, meta, thresh);

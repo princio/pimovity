@@ -1,13 +1,12 @@
 #ifndef __NY2_HPP__
 #define __NY2_HPP__
 
-#include "ncs.hpp"
-
+#include "holooj.h"
 
 class NY2 {
     void correct_region_boxes();
     void do_nms_sort();
-    box get_region_box(float *x, int n, int index, int i, int j);
+    Box get_region_box(float *x, int n, int index, int i, int j);
     int get_bboxes(int nbboxes_max);
     nnet *nn;
     public:
