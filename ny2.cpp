@@ -1,9 +1,6 @@
 
 
-#include "ny2.h"
-#include "ncs.h"
-#include "socket.h"
-
+#include "ny2.hpp"
 
 #include <float.h>
 #include <math.h>
@@ -53,37 +50,6 @@ float box_iou(box a, box b)
     return box_intersection(a, b)/box_union(a, b);
 }
 
-void correct_region_boxes()
-{
-    int i;
-    int netw = nn->in_w;
-    int neth = nn->in_h;
-
-    int new_w= 0;
-    int new_h= 0;
-
-    int w = nn->im_cols;
-    int h = nn->im_rows;
-    if (((float)netw/w) < ((float)neth/h)) {
-        new_w = netw;
-        new_h = (h * netw)/w;
-    } else {
-        new_h = neth;
-        new_w = (w * neth)/h;
-    }
-    for (i = 0; i < nn->nbbox_total; ++i){
-        if(nn->dets[i].prob[16] > 0.5) {
-            printf("\b");
-        }
-        box b = nn->dets[i].bbox;
-        b.x =  (b.x - (netw - new_w)/2./netw) / ((float)new_w/netw); 
-        b.y =  (b.y - (neth - new_h)/2./neth) / ((float)new_h/neth); 
-        b.w *= (float)netw/new_w;
-        b.h *= (float)neth/new_h;
-        nn->dets[i].bbox = b;
-    }
-}
-
 int nms_comparator(const void *pa, const void *pb)
 {
     detection a = *(detection *)pa;
@@ -99,85 +65,116 @@ int nms_comparator(const void *pa, const void *pb)
     return 0;
 }
 
+void NY2::correct_region_boxes()
+{
+    int i;
+    int netw = this->nn->in_w;
+    int neth = this->nn->in_h;
+
+    int new_w= 0;
+    int new_h= 0;
+
+    int w = this->nn->im_cols;
+    int h = this->nn->im_rows;
+    if (((float)netw/w) < ((float)neth/h)) {
+        new_w = netw;
+        new_h = (h * netw)/w;
+    } else {
+        new_h = neth;
+        new_w = (w * neth)/h;
+    }
+    for (i = 0; i < this->nn->nbbox_total; ++i){
+        if(this->nn->dets[i].prob[16] > 0.5) {
+            printf("\b");
+        }
+        box b = this->nn->dets[i].bbox;
+        b.x =  (b.x - (netw - new_w)/2./netw) / ((float)new_w/netw); 
+        b.y =  (b.y - (neth - new_h)/2./neth) / ((float)new_h/neth); 
+        b.w *= (float)netw/new_w;
+        b.h *= (float)neth/new_h;
+        this->nn->dets[i].bbox = b;
+    }
+}
+
 /**
  * @brief NMS sort
  * @param total    The total number of bounding boxes
  * @param classes  number of classes
  */
-void do_nms_sort()
+void NY2::do_nms_sort()
 {
     float thresh = .45; // like in darknet:detector#575
     int i, j, k;
-    int total = nn->nbbox_total;
+    int total = this->nn->nbbox_total;
     k = (total)-1;
     for(i = 0; i <= k; ++i){
-        if(nn->dets[i].objectness == 0){
-            detection swap = nn->dets[i];
-            nn->dets[i] = nn->dets[k];
-            nn->dets[k] = swap;
+        if(this->nn->dets[i].objectness == 0){
+            detection swap = this->nn->dets[i];
+            this->nn->dets[i] = this->nn->dets[k];
+            this->nn->dets[k] = swap;
             --k;
             --i;
         }
     }
     total = k+1;
 
-    for(k = 0; k < nn->nclasses; ++k){
+    for(k = 0; k < this->nn->nclasses; ++k){
         for(i = 0; i < total; ++i){
-            nn->dets[i].sort_class = k;
+            this->nn->dets[i].sort_class = k;
         }
-        qsort(nn->dets, total, sizeof(detection), nms_comparator);
+        qsort(this->nn->dets, total, sizeof(detection), nms_comparator);
         for(i = 0; i < total; ++i){
-            if(nn->dets[i].prob[k] == 0) continue;
-            box a = nn->dets[i].bbox;
+            if(this->nn->dets[i].prob[k] == 0) continue;
+            box a = this->nn->dets[i].bbox;
             for(j = i+1; j < total; ++j){
-                box b = nn->dets[j].bbox;
+                box b = this->nn->dets[j].bbox;
                 if (box_iou(a, b) > thresh){
-                    nn->dets[j].prob[k] = 0;
+                    this->nn->dets[j].prob[k] = 0;
                 }
             }
         }
     }
 }
 
-box get_region_box(float *x, int n, int index, int i, int j)
+box NY2::get_region_box(float *x, int n, int index, int i, int j)
 {
     box b;
-    b.x = (j + EXPIT(x[index])) / nn->out_w;
-    b.y = (i + EXPIT(x[index+1])) / nn->out_h;
-    b.w = exp(x[index + 2]) * nn->anchors[2*n]   / nn->out_w;
-    b.h = exp(x[index + 3]) * nn->anchors[2*n+1] / nn->out_h;
+    b.x = (j + EXPIT(x[index])) / this->nn->out_w;
+    b.y = (i + EXPIT(x[index+1])) / this->nn->out_h;
+    b.w = exp(x[index + 2]) * this->nn->anchors[2*n]   / this->nn->out_w;
+    b.h = exp(x[index + 3]) * this->nn->anchors[2*n+1] / this->nn->out_h;
     return b;
 }
 
-int get_bboxes(int nbboxes_max)
+int NY2::get_bboxes(int nbboxes_max)
 {
     int i,j,n;
-    int wh = nn->out_w * nn->out_h;
+    int wh = this->nn->out_w * this->nn->out_h;
     int b = 0;
     for (i = 0; i < wh; ++i){
-        for(n = 0; n < nn->nbbox; ++n){
-            int obj_index  = b + nn->ncoords;  //entry_index(l, 0, n*yolo_w*yolo_h + i, yolo_coords);
+        for(n = 0; n < this->nn->nbbox; ++n){
+            int obj_index  = b + this->nn->ncoords;  //entry_index(l, 0, n*yolo_w*yolo_h + i, yolo_coords);
             int box_index  = b;                //entry_index(l, 0, n*yolo_w*yolo_h + i, 0);
             int det_index = i + n*wh;           // det have the same size of output but reordered with struct
                                                 // det have size 13x13x5=845, total number of bboxes.
                                                 // for each one there are 2 different pointers to: bbox(5) and classes(80)
-            float scale = EXPIT(nn->output[obj_index]);
+            float scale = EXPIT(this->nn->output[obj_index]);
 
-            for(j = 0; j < nn->nclasses; ++j){
-                nn->dets[det_index].prob[j] = 0;
+            for(j = 0; j < this->nn->nclasses; ++j){
+                this->nn->dets[det_index].prob[j] = 0;
             }
 
-            nn->dets[det_index].bbox = get_region_box(nn->output, n, box_index, i / nn->out_w, i % nn->out_w);
+            this->nn->dets[det_index].bbox = get_region_box(this->nn->output, n, box_index, i / this->nn->out_w, i % this->nn->out_w);
             
-            if(scale > nn->thresh) {
-                nn->dets[det_index].objectness = scale;
+            if(scale > this->nn->thresh) {
+                this->nn->dets[det_index].objectness = scale;
 
                 /** SOFTMAX **/
-                float *pclasses = nn->output + b + 5;
+                float *pclasses = this->nn->output + b + 5;
                 float sum = 0;
                 float largest = -FLT_MAX;
                 int k;
-                int n0_classes = nn->nclasses - 1;
+                int n0_classes = this->nn->nclasses - 1;
                 for(k = n0_classes; k >= 0; --k){
                     if(pclasses[k] > largest) largest = pclasses[k];
                 }
@@ -188,25 +185,25 @@ int get_bboxes(int nbboxes_max)
                 }
                 for(k = n0_classes; k >= 0; --k){
                     float prob = scale * pclasses[k] / sum;
-                    nn->dets[det_index].prob[k] = (prob > nn->thresh) ? prob : 0;
+                    this->nn->dets[det_index].prob[k] = (prob > this->nn->thresh) ? prob : 0;
                 }
                 /** SOFTMAX **/
             }
-            b += nn->ncoords + 1 + nn->nclasses;
+            b += this->nn->ncoords + 1 + this->nn->nclasses;
         }
     }
 
-    correct_region_boxes();
+    this->correct_region_boxes();
 
-    do_nms_sort();
+    this->do_nms_sort();
 
     int nbbox = 0;
-    for(int n = 0; n < nn->nbbox_total; n++) {
-        for(int k = 0; k < nn->nclasses; k++) {
-            if (nn->dets[n].prob[k] > .5) {
-                detection d = nn->dets[n];
+    for(int n = 0; n < this->nn->nbbox_total; n++) {
+        for(int k = 0; k < this->nn->nclasses; k++) {
+            if (this->nn->dets[n].prob[k] > .5) {
+                detection d = this->nn->dets[n];
 
-                bbox *_bbox = &nn->bboxes[nbbox];
+                bbox *_bbox = &this->nn->bboxes[nbbox];
 
                 memcpy(&(_bbox->box), &(d.bbox), 16);  //BBOX
                 _bbox->objectness = d.objectness;  //OBJ
@@ -220,20 +217,22 @@ int get_bboxes(int nbboxes_max)
     return nbbox;
 }
 
+NY2::NY2(nnet *nn) { this->nn = nn; }
+
 /**
  * @return -1 if error; 0 if no bbox has found; x>0 if it found x bbox.
  * */ 
-int ny2_inference(int nbboxes_max) {
+int NY2::inference(int nbboxes_max) {
 
 #ifdef NOMOVIDIUS
     int i = -1;
     char s[20] = {0};
     FILE*f = fopen("out.txt", "r");
     while (fgets(s, 20, f) != NULL) {
-       nn->output[++i] = atof(s);
+       this->nn->output[++i] = atof(s);
     }
     fclose(f);
 #endif
 
-    return get_bboxes(nbboxes_max);
+    return this->get_bboxes(nbboxes_max);
 }

@@ -7,18 +7,19 @@
  *
  */
 #include "holooj.h"
-#include "ncs.h"
+#include "ncs.hpp"
 #include "ny2.h"
 
 #include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstdint>
+#include <cstring>
 #include <time.h>
 #include <mvnc.h>
 
 
+#define EXPIT(X)  (1 / (1 + exp(-(X))))
 
 uint32_t numNCSConnected = 0;
 ncStatus_t retCode;
@@ -28,13 +29,11 @@ struct ncFifoHandle_t* fifo_in = NULL;
 struct ncFifoHandle_t* fifo_out = NULL;
 NCSerror ncs_errno;
 
-nnet *nn;
 
-
-int parse_meta_file(const char *meta) {
+int NCS::parse_meta_file() {
 
     char *buf;
-    FILE *f = fopen(meta, "r");
+    FILE *f = fopen(this->meta_path.c_str(), "r");
 
     REPORT(f == NULL, NCSParseError, "Parsing error");
 
@@ -43,7 +42,7 @@ int parse_meta_file(const char *meta) {
     length_read = ftell(f);
     rewind(f);
 
-    if(!(buf = malloc(length_read))) {
+    if(!(buf = (char*) malloc(length_read))) {
         // couldn't allocate buffer
         fclose(f);
         return -1;
@@ -78,60 +77,60 @@ int parse_meta_file(const char *meta) {
         } else
         if(!strcmp(pch, "classes")) {
             pch = strtok (NULL, ",\"}");
-            sscanf(pch, "%*[^0123456789]%d", &nn->nclasses);
+            sscanf(pch, "%*[^0123456789]%d", &this->nn.nclasses);
         } else
         if(!strcmp(pch, "inp_size")) {
             pch = strtok (NULL, "[");
             in_size = strtok (NULL, "]");
-            sscanf(in_size, "%d%*[^0123456789]%d%*[^0123456789]%d", &nn->in_w, &nn->in_h, &nn->in_c);
+            sscanf(in_size, "%d%*[^0123456789]%d%*[^0123456789]%d", &this->nn.in_w, &this->nn.in_h, &this->nn.in_c);
         } else
         if(!strcmp(pch, "out_size")) {
             pch = strtok (NULL, "[");
             out_size = strtok (NULL, "]");
-            sscanf(out_size, "%d%*[^0123456789]%d%*[^0123456789]%d", &nn->out_w, &nn->out_h, &nn->out_z);
+            sscanf(out_size, "%d%*[^0123456789]%d%*[^0123456789]%d", &this->nn.out_w, &this->nn.out_h, &this->nn.out_z);
         } else
         if(!strcmp(pch, "num")) {
             pch = strtok (NULL, ",}\"");
-            sscanf(pch, "%*[^0123456789]%d", &nn->nbbox);
+            sscanf(pch, "%*[^0123456789]%d", &this->nn.nbbox);
         } else
         if(!strcmp(pch, "coords")) {
             pch = strtok (NULL, ",}\"");
-            sscanf(pch, "%*[^0123456789]%d", &nn->ncoords);
+            sscanf(pch, "%*[^0123456789]%d", &this->nn.ncoords);
         }
         pch = strtok (NULL, "\"");
     }
 
-    nn->classes_buffer = calloc(strlen(labels) + 80, 1);
-    nn->classes = calloc(nn->nclasses, sizeof(char*));
+    this->nn.classes_buffer = (char*) calloc(strlen(labels) + 80, 1);
+    this->nn.classes = (char**) calloc(this->nn.nclasses, sizeof(char*));
     pch = strtok(labels, "\"");
     int i = 0;
     int l = 0;
     while (pch != NULL)
     {
         if(strstr(pch, ",") == NULL) {
-            strcpy(nn->classes_buffer + l, pch);
-            nn->classes[i++] = nn->classes_buffer + l;
+            strcpy(this->nn.classes_buffer + l, pch);
+            this->nn.classes[i++] = this->nn.classes_buffer + l;
             l += strlen(pch);
-            nn->classes_buffer[l] = '\0';
+            this->nn.classes_buffer[l] = '\0';
             ++l;
         }
         pch = strtok(NULL, "\"");
     }
 
-    nn->nanchors = 1;
+    this->nn.nanchors = 1;
     pch = strpbrk (anchors_text, ",");
     while (pch != NULL)
     {
-        ++nn->nanchors;
+        ++this->nn.nanchors;
         pch = strpbrk (pch+1, ",");
     }
 
-    nn->anchors = calloc(nn->nanchors, sizeof(float));
+    this->nn.anchors = (float *) calloc(this->nn.nanchors, sizeof(float));
     pch = strtok(anchors_text, ",]");
     i = -1;
     while (pch != NULL)
     {
-        sscanf(pch, "%f", &nn->anchors[++i]);
+        sscanf(pch, "%f", &this->nn.anchors[++i]);
         pch = strtok(NULL, ",]");
     }
     printf("\n\n");
@@ -139,86 +138,84 @@ int parse_meta_file(const char *meta) {
 
     printf("\nYOLOv2:\n");
 
-    printf("\n\tclasses[%d]:\n\t\t", nn->nclasses);
-    for(i=0; i < nn->nclasses; i++) printf("%s%s", nn->classes[i], (i > 0 && i % 10 == 0) ? "\n\t\t" : ", ");
+    printf("\n\tclasses[%d]:\n\t\t", this->nn.nclasses);
+    for(i=0; i < this->nn.nclasses; i++) printf("%s%s", this->nn.classes[i], (i > 0 && i % 10 == 0) ? "\n\t\t" : ", ");
 
-    printf("\n\n\tanchors[%d]:\n\t\t", nn->nanchors);
-    for(i=0; i < nn->nanchors; i++) printf("%f%s", nn->anchors[i], (i > 0 && i %  3 == 0) ? "\n\t\t" : ", ");
+    printf("\n\n\tanchors[%d]:\n\t\t", this->nn.nanchors);
+    for(i=0; i < this->nn.nanchors; i++) printf("%f%s", this->nn.anchors[i], (i > 0 && i %  3 == 0) ? "\n\t\t" : ", ");
 
     printf("\n\n\t input: [ %5d, %5d, %5d ]\n\toutput: [ %5d, %5d, %5d ]\n\t nbbox: %d\n\t ncoords: %d\n",
-            nn->in_w, nn->in_h, nn->in_c, nn->out_w, nn->out_h, nn->out_z, nn->nbbox, nn->ncoords);
+            this->nn.in_w, this->nn.in_h, this->nn.in_c, this->nn.out_w, this->nn.out_h, this->nn.out_z, this->nn.nbbox, this->nn.ncoords);
 
-    nn->nbbox_total = nn->out_w * nn->out_h * nn->nbbox;
-    nn->input_size_byte = 4 * nn->in_w * nn->in_h * nn->in_c;
-    nn->output_size_byte = 4 * nn->out_w * nn->out_h * nn->nbbox * (nn->ncoords + 1 + nn->nclasses);
+    this->nn.nbbox_total = this->nn.out_w * this->nn.out_h * this->nn.nbbox;
+    this->nn.input_size_byte = 4 * this->nn.in_w * this->nn.in_h * this->nn.in_c;
+    this->nn.output_size_byte = 4 * this->nn.out_w * this->nn.out_h * this->nn.nbbox * (this->nn.ncoords + 1 + this->nn.nclasses);
     printf("\n\t input size: %d\n\toutput_size: %d\n\nnbbox total: %d\n\n",
-            nn->input_size_byte, nn->output_size_byte, nn->nbbox_total);
+            this->nn.input_size_byte, this->nn.output_size_byte, this->nn.nbbox_total);
 
     free(buf);
 
     printf("NN:\n");
-    printf("\t%20s:\t%s\n", "name", nn->name);
-    printf("\t%20s:\t%f\n", "thresh", nn->thresh);
-    printf("\t%20s:\t[ %d, %d, %d]\n", "input", nn->in_w, nn->in_h, nn->in_c);
-    printf("\t%20s:\t[ %d, %d ]\n", "image", nn->im_cols, nn->im_rows);
-    printf("\t%20s:\t[ %d, %d, %d ]\n", "output", nn->out_w, nn->out_h, nn->out_z);
-    printf("\t%20s:\t%d\n", "nbbox", nn->nbbox);
-    printf("\t%20s:\t%d\n", "nbbox_total", nn->nbbox_total);
-    printf("\t%20s:\t%d\n", "ncoords", nn->ncoords);
-    printf("\t%20s:\t%d\n", "nclasses", nn->nclasses);
-    printf("\t%20s:\t%d\n", "nanchors", nn->nanchors);
-    printf("\t%20s:\t%d\n", "input_size_byte", nn->input_size_byte);
-    printf("\t%20s:\t%d\n", "output_size_byte", nn->output_size_byte);
+    printf("\t%20s:\t%s\n", "name", this->nn.name);
+    printf("\t%20s:\t%f\n", "thresh", this->nn.thresh);
+    printf("\t%20s:\t[ %d, %d, %d]\n", "input", this->nn.in_w, this->nn.in_h, this->nn.in_c);
+    printf("\t%20s:\t[ %d, %d ]\n", "image", this->nn.im_cols, this->nn.im_rows);
+    printf("\t%20s:\t[ %d, %d, %d ]\n", "output", this->nn.out_w, this->nn.out_h, this->nn.out_z);
+    printf("\t%20s:\t%d\n", "nbbox", this->nn.nbbox);
+    printf("\t%20s:\t%d\n", "nbbox_total", this->nn.nbbox_total);
+    printf("\t%20s:\t%d\n", "ncoords", this->nn.ncoords);
+    printf("\t%20s:\t%d\n", "nclasses", this->nn.nclasses);
+    printf("\t%20s:\t%d\n", "nanchors", this->nn.nanchors);
+    printf("\t%20s:\t%d\n", "input_size_byte", this->nn.input_size_byte);
+    printf("\t%20s:\t%d\n", "output_size_byte", this->nn.output_size_byte);
 
     return 0;
 }
 
 
-int read_graph_from_file(const char *graph_filename, unsigned int *length_read, void **graph_buf)
-{
+int NCS::load_nn(){
+    
+    unsigned int graph_len = 0;
+    void *graph_buf;
     FILE *graph_file_ptr;
 
-    graph_file_ptr = fopen(graph_filename, "rb");
+    /**
+     * read file bytes begin v
+     */
+    graph_file_ptr = fopen(this->graph_path.c_str(), "rb");
 
     if(graph_file_ptr == NULL) return -1;
 
-    *length_read = 0;
+    graph_len = 0;
     fseek(graph_file_ptr, 0, SEEK_END);
-    *length_read = ftell(graph_file_ptr);
+    graph_len = ftell(graph_file_ptr);
     rewind(graph_file_ptr);
 
-    if(!(*graph_buf = malloc(*length_read))) {
-        // couldn't allocate buffer
+    if(!(graph_buf = malloc(graph_len))) {
         fclose(graph_file_ptr);
-        return -1;
+        REPORT(-1, NCSReadGraphFileError, "");
     }
 
-    size_t to_read = *length_read;
-    size_t read_count = fread(*graph_buf, 1, to_read, graph_file_ptr);
+    size_t to_read = graph_len;
+    size_t read_count = fread(graph_buf, 1, to_read, graph_file_ptr);
 
-    if(read_count != *length_read) {
+    if(read_count != graph_len) {
         fclose(graph_file_ptr);
-        free(*graph_buf);
-        *graph_buf = NULL;
-        return -1;
+        free(graph_buf);
+        graph_buf = NULL;
+        REPORT(-1, NCSReadGraphFileError, "");
     }
 
     fclose(graph_file_ptr);
 
-    return 0;
-}
+
+    /**
+     * read finished            ^
+     * load graph into movidius v
+     */
 
 
-int ncs_load_nn(const char *graph_path){
-    
-    unsigned int graph_len = 0;
-    void *graph_buf;
-
-    retCode = read_graph_from_file(graph_path, &graph_len, &graph_buf);
-    REPORT(retCode, NCSReadGraphFileError, "");
-
-
-    retCode = ncGraphCreate(nn->name, &graph_handle);
+    retCode = ncGraphCreate(this->nn.name, &graph_handle);
     REPORT(retCode, NCSGraphCreateError, "");
 
 
@@ -232,24 +229,19 @@ int ncs_load_nn(const char *graph_path){
     return 0;
 }
 
-int ncs_init(const char *graph, const char *meta, NCSNNType nntype, nnet *_nn) {
-
-    nn = calloc(1, sizeof(nnet));
-    _nn = nn;
-
-    if(parse_meta_file(meta))
+int NCS::init() {
+    if(this->parse_meta_file())
         return -1;
 
-    switch(nntype) {
+    switch(this->nn.type) {
         case NCSNN_YOLOv2:
-            nn->type = NCSNN_YOLOv2;
-            strcpy(nn->name, "yolov2");
+            this->nn.type = NCSNN_YOLOv2;
+            strcpy(this->nn.name, "yolov2");
         break;
     }
 
-
-    nn->input = calloc(nn->input_size_byte, 1);
-    nn->output = calloc(nn->output_size_byte, 1);
+    this->nn.input = (float*) calloc(this->nn.input_size_byte, 1);
+    this->nn.output = (float*) calloc(this->nn.output_size_byte, 1);
 
     retCode = ncDeviceCreate(0, &dev_handle);
     REPORT(retCode, NCSDevCreateError, "");
@@ -257,25 +249,32 @@ int ncs_init(const char *graph, const char *meta, NCSNNType nntype, nnet *_nn) {
     retCode = ncDeviceOpen(dev_handle);
     REPORT(retCode, NCSDevOpenError, "");
 
+    this->nn.dets = (detection*) calloc(this->nn.nbbox_total, sizeof(detection));
 
-    nn->dets = (detection*) calloc(nn->nbbox_total, sizeof(detection));
-
-    for(int i = nn->nbbox_total-1; i >= 0; --i) {
-        nn->dets[i].prob = (float*) calloc(nn->nclasses, sizeof(float));
+    for(int i = this->nn.nbbox_total-1; i >= 0; --i) {
+        this->nn.dets[i].prob = (float*) calloc(this->nn.nclasses, sizeof(float));
     }
 
+    if(this->load_nn()) return -1;
 
-    if(ncs_load_nn(graph)) return -1;
+    this->ny2 = new NY2(&this->nn);
 
     return 0;
+
+}
+
+NCS::NCS(const char *graph, const char *meta, NCSNNType nntype) {
+    this->graph_path = graph;
+    this->meta_path = meta;
+    this->nn.type = nntype;
 }
 
 
-int ncs_inference_byte(unsigned char *image, int nbboxes_max) {
+int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
 	int i = 0;
-    int letterbox = nn->in_c * nn->in_w * ((nn->in_h - nn->im_rows) >> 1);
-    int l = nn->im_rows * nn->im_cols * nn->in_c;
-	float *y = &nn->input[letterbox];
+    int letterbox = this->nn.in_c * this->nn.in_w * ((this->nn.in_h - this->nn.im_rows) >> 1);
+    int l = this->nn.im_rows * this->nn.im_cols * this->nn.in_c;
+	float *y = &this->nn.input[letterbox];
 	while(i <= l-3) {
 		y[i] = image[i + 2] / 255.; ++i;    // X[i] = imbuffer[i+2] / 255.; ++i;
 		y[i] = image[i] / 255.;     ++i;    // X[i] = imbuffer[i] / 255.;   ++i;
@@ -283,15 +282,15 @@ int ncs_inference_byte(unsigned char *image, int nbboxes_max) {
 	}
 
 #ifdef OPENCV
-    IplImage *iplim = cvCreateImage(cvSize(nn->in_w, nn->in_h), IPL_DEPTH_32F, 3);
-    memcpy(iplim->imageData, nn->input, nn->input_size_byte*4);
+    IplImage *iplim = cvCreateImage(cvSize(this->nn.in_w, this->nn.in_h), IPL_DEPTH_32F, 3);
+    memcpy(iplim->imageData, this->nn.input, this->nn.input_size_byte*4);
     cvShowImage("bibo2", iplim);
     cvUpdateWindow("bibo2");
     cvReleaseImage(&iplim);
     // cvWaitKey(0);
 #endif
 
-    int nbbox = ncs_inference(nbboxes_max);
+    int nbbox = this->inference(nbboxes_max);
     
     if(nbbox < 0) return -1;
 
@@ -299,14 +298,14 @@ int ncs_inference_byte(unsigned char *image, int nbboxes_max) {
 }
 
 
-int ncs_inference(int nbboxes_max) {
+int NCS::inference(int nbboxes_max) {
 
     unsigned int length_bytes;
     unsigned int returned_opt_size;
-    unsigned int in_size_bytes = nn->input_size_byte;
-    unsigned int out_size_bytes = nn->output_size_byte;
+    unsigned int in_size_bytes = this->nn.input_size_byte;
+    unsigned int out_size_bytes = this->nn.output_size_byte;
 
-    retCode = ncGraphQueueInferenceWithFifoElem(graph_handle, fifo_in, fifo_out, nn->input, &in_size_bytes, 0);
+    retCode = ncGraphQueueInferenceWithFifoElem(graph_handle, fifo_in, fifo_out, this->nn.input, &in_size_bytes, 0);
     REPORT(retCode, NCSInferenceError, "recode=%d", retCode);
 
     returned_opt_size = 4;
@@ -315,39 +314,36 @@ int ncs_inference(int nbboxes_max) {
 
     REPORT(length_bytes != out_size_bytes, NCSTooFewBytesError, "(%d != %d)", length_bytes, out_size_bytes);
 
-    retCode = ncFifoReadElem(fifo_out, nn->output, &length_bytes, NULL);
+    retCode = ncFifoReadElem(fifo_out, this->nn.output, &length_bytes, NULL);
     REPORT(retCode, NCSFifoReadError, "recode=%d", retCode);
 
     int nbbox = -1;
-    switch(nn->type) {
+    switch(this->nn.type) {
         case NCSNN_YOLOv2:
-            nbbox = ny2_inference(nbboxes_max);
+            nbbox = this->ny2->inference(nbboxes_max);
             if(nbbox < 0) return -1;
         break;
     }
     return nbbox;
 }
 
-int ncs_destroy() {
+int NCS::destroy_movidius() {
     int er = NCSDestroyError;
     REPORT(retCode = ncFifoDestroy(&fifo_in), er, "");
     REPORT(retCode = ncFifoDestroy(&fifo_out), er, "");
     REPORT(retCode = ncGraphDestroy(&graph_handle), er, "");
     REPORT(retCode = ncDeviceClose(dev_handle), er, "");
     REPORT(retCode = ncDeviceDestroy(&dev_handle), er, "");
-
-    for(int i = nn->nbbox_total-1; i >= 0; --i){
-        free(nn->dets[i].prob);
-    }
-    free(nn->anchors);
-    free(nn->classes);
-    free(nn->classes_buffer);
-    free(nn->output);
-    free(nn->input);
-    free(nn->dets);
-    free(nn);
-
-    return 0;
 }
 
-#undef REPORT
+NCS::~NCS() {
+    for(int i = this->nn.nbbox_total-1; i >= 0; --i){
+        free(this->nn.dets[i].prob);
+    }
+    free(this->nn.anchors);
+    free(this->nn.classes);
+    free(this->nn.classes_buffer);
+    free(this->nn.output);
+    free(this->nn.input);
+    free(this->nn.dets);
+}

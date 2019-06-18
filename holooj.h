@@ -14,7 +14,7 @@ typedef const int error;
 
 #define REPORT_ERRNO( expr, code, msg, ... )\
     if((expr) < 0) {\
-        printf("\n[%s::%d] error "#code"=%d: "msg" [%d=%s].\n\n",\
+        printf("\n[%s::%d] error "#code"=%d: " msg " [%d=%s].\n\n",\
                 __FILE__, __LINE__, code, errno, strerror(errno), ##__VA_ARGS__);\
         return -1;\
     }

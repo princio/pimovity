@@ -1,6 +1,9 @@
 #ifndef __NCS_HPP__
 #define __NCS_HPP__
 
+#include "ny2.hpp"
+#include <string>
+
 
 typedef enum {
 	NCSNN_YOLOv2
@@ -68,11 +71,27 @@ typedef struct nnet {
     bbox *bboxes;
 } nnet;
 
-int ncs_init(const char*, const char*, NCSNNType, nnet *nn);
-
-int ncs_inference_byte(unsigned char *image, int nbboxes_max);
-int ncs_inference(int nbboxes_max);
-
-int ncs_destroy();
+class NCS {
+    private:
+        NY2 *ny2;
+        std::string graph_path = "";
+        std::string meta_path = "";
+        int parse_meta_file();
+        int load_nn();
+        box get_region_box(float *x, int n, int index, int i, int j);
+        void do_nms_sort();
+        int nms_comparator(const void *pa, const void *pb);
+        void correct_region_boxes();
+    public:
+        nnet nn;
+        detection *dets;
+        bbox *bboxes;
+        NCS(const char*, const char*, NCSNNType);
+        ~NCS();
+        int init();
+        int inference_byte(unsigned char *image, int nbboxes_max);
+        int inference(int nbboxes_max);
+        int destroy_movidius();
+};
 
 #endif //__NCS_HPP__
