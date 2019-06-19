@@ -219,9 +219,6 @@ int NY2::get_bboxes(int nbboxes_max)
 
 NY2::NY2(nnet *nn) { this->nn = nn; }
 
-/**
- * @return -1 if error; 0 if no bbox has found; x>0 if it found x bbox.
- * */ 
 int NY2::inference(int nbboxes_max) {
 
 #ifdef NOMOVIDIUS

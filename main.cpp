@@ -3,8 +3,6 @@
 
 #include "holooj.h"
 #include "coordinator.hpp"
-#include "include/spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -19,7 +17,7 @@
 
 
 int main (int argc, char** argv) {
-	spdlog::set_pattern("*** %^[%l]%$ [%S.%f] %v ***");
+	spdlog::set_pattern("*** %^[%S.%f::%5l::%@:%!]%$: %v  ***");
 
 	setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -41,7 +39,7 @@ int main (int argc, char** argv) {
 		printf("HoloOj for Raspberry.\n\t--graph\t\t\tthe path to the graph file.\n\t--meta\t\t\tthe path to the meta file.\n\t--iface\t\t\tthe network interface to use.\n\t--help, -h\t\tthis help.\n");
 		exit(0);
 	}
-	auto log_level = spdlog::level::off;
+	auto log_level = spdlog::level::debug;
 	if(argc >= 3) {
 		for(int i = 1; i < argc; i++) {
 			if(!strcmp(argv[i], "--iface")) {
@@ -69,6 +67,8 @@ int main (int argc, char** argv) {
 		}
 	}
 	spdlog::set_level(log_level);
+
+	printf("LOG LEVEL = %d", log_level);
 
 
     printf("HoloOj for Raspberry:\n\t%6s = %s\n\t%6s = %u\n\t%6s = %s\n\t%6s = %s\t%6s = %s\n",

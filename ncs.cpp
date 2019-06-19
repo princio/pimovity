@@ -29,41 +29,52 @@ struct ncFifoHandle_t* fifo_in = NULL;
 struct ncFifoHandle_t* fifo_out = NULL;
 NCSerror ncs_errno;
 
+int file2bytes(const char *filename, char **buf, unsigned int *n_bytes) {
+    SPDLOG_DEBUG("Started for «{}»", filename);
 
-int NCS::parse_meta_file() {
-    int ret;
-    char *buf;
-    FILE *f = fopen(this->meta_path.c_str(), "r");
+    FILE *f = fopen(filename, "r");
 
-    REPORTSPD((f == NULL || f == 0x0) ? -1 : 0, "NCS parsing error failed to open file “{}”: «[{}] {}»", meta_path, errno, strerror(errno));
 
-    unsigned int length_read;
+    REPORTSPD(f == NULL, "Failed to open file “{}”: «[{}] {}»", filename, errno, strerror(errno));
+
+    unsigned int to_read, has_read;
     fseek(f, 0, SEEK_END);
-    length_read = ftell(f);
+    to_read = ftell(f);
     rewind(f);
 
-    if(!(buf = (char*) malloc(length_read))) {
+    if(!(*buf = (char*) malloc(to_read))) {
         fclose(f);
-        REPORTSPD(1, "NCS parsing error: «couldn't allocate buffer».");
+        REPORTSPD(1, "«couldn't allocate buffer».");
     }
 
-    size_t to_read = length_read;
-    size_t read_count = fread(buf, 1, to_read, f);
+    has_read = fread(*buf, 1, to_read, f);
 
-    if(read_count != length_read) {
+    if(has_read != to_read) {
         fclose(f);
-        free(buf);
-        buf = NULL;
-        REPORTSPD(1, "NCS parsing error: «read wrong bytes number ({} != {})».", read_count, length_read);
+        free(*buf);
+        *buf = NULL;
+        REPORTSPD(1, "«read wrong bytes number ({} != {})».", has_read, to_read);
     }
 
-    REPORTSPD(fclose(f) != 0, "NCS parsing error during closing: «[{}] {}».", errno, strerror(errno));
-    
+    REPORTSPD(fclose(f) != 0, "«[{}] {}».", errno, strerror(errno));
+
+    if(n_bytes) *n_bytes = has_read;
+    SPDLOG_DEBUG("Done «file2bytes» ({} bytes).", has_read);
+    return 0;
+}
+
+int NCS::parse_meta_file() {
+    SPDLOG_DEBUG("Starting «parse_meta_file»");
+    char *buf;
     char *labels;
     char *anchors_text;
     char *in_size;
     char *out_size;
-    char *pch = strtok( buf, "\"\"" );
+    char *pch;
+    
+    if(file2bytes(meta_path.c_str(), &buf, NULL)) return -1;
+
+    pch = strtok( buf, "\"\"" );
     while (pch != NULL)
     {
         if(!strcmp(pch, "labels")) {
@@ -168,64 +179,37 @@ int NCS::parse_meta_file() {
     printf("\t%20s:\t%d\n", "input_size_byte", this->nn.input_size_byte);
     printf("\t%20s:\t%d\n", "output_size_byte", this->nn.output_size_byte);
 
+    SPDLOG_DEBUG("Done «parse_meta_file»");
     return 0;
 }
 
 
 int NCS::load_nn(){
-    
-    unsigned int graph_len = 0;
-    void *graph_buf;
-    FILE *graph_file_ptr;
+    SPDLOG_DEBUG("Starting «load_nn»");
+    int used_memory, total_memory;
+    unsigned int graph_len = 0, data_length;
+    char *buf;
 
-    /**
-     * read file bytes begin v
-     */
-    graph_file_ptr = fopen(this->graph_path.c_str(), "rb");
-
-    REPORTSPD(graph_file_ptr == NULL, "NCS loading NN error failed to open file “{}”: «[{}] {}»", graph_path, errno, strerror(errno));
-
-    graph_len = 0;
-    fseek(graph_file_ptr, 0, SEEK_END);
-    graph_len = ftell(graph_file_ptr);
-    rewind(graph_file_ptr);
-
-    if(!(graph_buf = malloc(graph_len))) {
-        fclose(graph_file_ptr);
-        REPORT(-1, NCSReadGraphFileError, "");
-        REPORTSPD(1, "NCS loading NN error: «couldn't allocate buffer».");
-    }
-
-    size_t to_read = graph_len;
-    size_t read_count = fread(graph_buf, 1, to_read, graph_file_ptr);
-
-    if(read_count != graph_len) {
-        fclose(graph_file_ptr);
-        free(graph_buf);
-        graph_buf = NULL;
-        REPORTSPD(1, "NCS loading NN error: «read wrong bytes number ({} != {})».", read_count, graph_len);
-    }
-
-    REPORTSPD(fclose(graph_file_ptr) != 0, "NCS loading NN error during closing: «[{}] {}».", errno, strerror(errno));
-
-
-    /**
-     * read finished            ^
-     * load graph into movidius v
-     */
-
+    if(file2bytes(graph_path.c_str(), &buf, &graph_len)) return -1;
 
     retCode = ncGraphCreate(this->nn.name, &graph_handle);
     REPORTSPD(retCode, "NCS loading NN: «[{}] graph create error».", retCode);
+    SPDLOG_DEBUG("graph created.");
 
+    ncDeviceGetOption(dev_handle, NC_RO_DEVICE_CURRENT_MEMORY_USED, &used_memory, &data_length);
+    ncDeviceGetOption(dev_handle, NC_RO_DEVICE_MEMORY_SIZE, &total_memory, &data_length);
 
-    retCode = ncGraphAllocateWithFifosEx(dev_handle, graph_handle, graph_buf, graph_len,
+    SPDLOG_DEBUG("used/total memory = {}/{}", used_memory, total_memory);
+
+    retCode = ncGraphAllocateWithFifosEx(dev_handle, graph_handle, buf, graph_len,
                                         &fifo_in, NC_FIFO_HOST_WO, 2, NC_FIFO_FP32,
                                         &fifo_out, NC_FIFO_HOST_RO, 2, NC_FIFO_FP32);
     REPORTSPD(retCode, "NCS loading NN: «[{}] graph allocate error».", retCode);
+    SPDLOG_DEBUG("graph allocated with fifos.");
 
-    free(graph_buf);
+    free(buf);
 
+    SPDLOG_DEBUG("Done «load_nn»");
     return 0;
 }
 
@@ -244,10 +228,14 @@ int NCS::init() {
     this->nn.output = (float*) calloc(this->nn.output_size_byte, 1);
 
     retCode = ncDeviceCreate(0, &dev_handle);
-    REPORT(retCode, NCSDevCreateError, "");
+    SPDLOG_DEBUG("Creating device...");
+    REPORTSPD(retCode, "«device creating error» [{}].", retCode);
+    SPDLOG_DEBUG("Device created.");
 
+    SPDLOG_DEBUG("Opening device...");
     retCode = ncDeviceOpen(dev_handle);
-    REPORT(retCode, NCSDevOpenError, "");
+    REPORTSPD(retCode, "«device opening error» [{}].", retCode);
+    SPDLOG_DEBUG("Device opened.");
 
     this->nn.dets = (detection*) calloc(this->nn.nbbox_total, sizeof(detection));
 
@@ -306,16 +294,16 @@ int NCS::inference(int nbboxes_max) {
     unsigned int out_size_bytes = this->nn.output_size_byte;
 
     retCode = ncGraphQueueInferenceWithFifoElem(graph_handle, fifo_in, fifo_out, this->nn.input, &in_size_bytes, 0);
-    REPORT(retCode, NCSInferenceError, "recode=%d", retCode);
+    REPORTSPD(retCode, "«NCS inference error.» [{}]", retCode);
 
     returned_opt_size = 4;
     retCode = ncFifoGetOption(fifo_out, NC_RO_FIFO_ELEMENT_DATA_SIZE, &length_bytes, &returned_opt_size);
-    REPORT(retCode, NCSGetOptError, "recode=%d", retCode);
+    REPORTSPD(retCode, "«NCS get option error.» [{}]", retCode);
 
-    REPORT(length_bytes != out_size_bytes, NCSTooFewBytesError, "(%d != %d)", length_bytes, out_size_bytes);
+    REPORTSPD(length_bytes != out_size_bytes, "«Too few bytes read from fifo output ({} != {})»", length_bytes, out_size_bytes);
 
     retCode = ncFifoReadElem(fifo_out, this->nn.output, &length_bytes, NULL);
-    REPORT(retCode, NCSFifoReadError, "recode=%d", retCode);
+    REPORTSPD(retCode, "«NCS fifo read error.» [{}]", retCode);
 
     int nbbox = -1;
     switch(this->nn.type) {
@@ -324,16 +312,16 @@ int NCS::inference(int nbboxes_max) {
             if(nbbox < 0) return -1;
         break;
     }
+    
     return nbbox;
 }
 
 int NCS::destroy_movidius() {
-    int er = NCSDestroyError;
-    REPORT(retCode = ncFifoDestroy(&fifo_in), er, "");
-    REPORT(retCode = ncFifoDestroy(&fifo_out), er, "");
-    REPORT(retCode = ncGraphDestroy(&graph_handle), er, "");
-    REPORT(retCode = ncDeviceClose(dev_handle), er, "");
-    REPORT(retCode = ncDeviceDestroy(&dev_handle), er, "");
+    REPORTSPD(retCode = ncFifoDestroy(&fifo_in), "«Fifo In destroy error» [{}].", retCode);
+    REPORTSPD(retCode = ncFifoDestroy(&fifo_out), "«Fifo Out destroy error» [{}].", retCode);
+    REPORTSPD(retCode = ncGraphDestroy(&graph_handle), "Graph destroy error» [{}].", retCode);
+    REPORTSPD(retCode = ncDeviceClose(dev_handle), "«Device closing error» [{}].", retCode);
+    REPORTSPD(retCode = ncDeviceDestroy(&dev_handle), "«Device destroying error» [{}].", retCode);
     return 0;
 }
 

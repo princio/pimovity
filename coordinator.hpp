@@ -75,14 +75,14 @@ class Coordinator {
         /** socket **/
         int timeouts = 10;
         int fd_server;
-        int fd_pi;
-        int fd_uy;
+        int fd_pi = -1;
+        int fd_uy = -1;
         struct pollfd ufds[1];
         struct sockaddr_in server_addr;
         struct sockaddr_in pi_addr;
         struct sockaddr_in uy_addr;
     public:
-        const int STX = 767590;
+        const int STX = 27692;//767590;
         std::string iface;
         unsigned int port;
         bool isBMP = false;

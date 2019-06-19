@@ -13,7 +13,7 @@ CC=gcc
 CPP=g++
 
 #common to both compiler and linker
-COMMON=-Iinclude/ -I. -DSPDLOG_COMPILED_LIB
+COMMON=-Iinclude/ -I.
 
 #only for compiler
 CFLAGS=-Wall -Wno-unused-result -Wno-unknown-pragmas -Wfatal-errors -O0 -g
@@ -24,11 +24,11 @@ EXEC=./debug/gengi
 
 
 
-all: gengi
+all: debug/objs/spdlog.o debug/objs/ncs.o debug/objs/ny2.o debug/objs/coordinator.o debug/objs/main.o holooj.h
+	$(CPP)  $(COMMON) $(CFLAGS) $(CPPFLAGS) $^ -o gengi $(LDFLAGS)
 
-
-gengi: debug/objs/spdlog.o debug/objs/ncs.o debug/objs/ny2.o debug/objs/coordinator.o debug/objs/main.o
-	$(CPP)  $(COMMON) $(CFLAGS) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)
+debug/objs/%.o: %.cpp %.hpp
+	$(CPP) $(COMMON) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 debug/objs/%.o: %.cpp
 	$(CPP) $(COMMON) $(CFLAGS) $(CPPFLAGS) -c $< -o $@

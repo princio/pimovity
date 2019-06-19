@@ -1,6 +1,7 @@
 #ifndef __HOLOOJ_H__
 #define __HOLOOJ_H__
 
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 
 #include <sstream>
 #include <boost/format.hpp>
@@ -73,7 +74,7 @@ typedef struct nnet {
 
 #define REPORTSPD_ERRNO( expr )\
     if((expr)) {\
-        spdlog::error(" Error in [{}:{}]: {} [{}]", __FILE__, __LINE__, strerror(errno),  errno);\
+        SPDLOG_ERROR(" Error in [{}:{}]: {} [{}]", __FILE__, __LINE__, strerror(errno),  errno);\
         return -1;\
     }
 
@@ -86,8 +87,8 @@ typedef struct nnet {
 
 
 #define REPORTSPD( expr, msg, ... )\
-    if((expr) < 0) {\
-        spdlog::error("Error in [{}:{}]: " msg, __FILE__, __LINE__, ##__VA_ARGS__);\
+    if((expr)) {\
+        SPDLOG_ERROR("Error in [{}:{}]: " msg, __FILE__, __LINE__, ##__VA_ARGS__);\
         return -1;\
     }
 

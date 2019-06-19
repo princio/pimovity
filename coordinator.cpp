@@ -1,6 +1,7 @@
 
-
-
+#include "holooj.h"
+#include "coordinator.hpp"
+#include "ncs.hpp"
 
 #include <stdio.h>
 #include <string.h>
@@ -25,11 +26,6 @@
 #include <turbojpeg.h>
 #include <unistd.h>
 #include <stdexcept>
-
-#include "include/spdlog/spdlog.h"
-#include "holooj.h"
-#include "coordinator.hpp"
-#include "ncs.hpp"
 
 typedef enum PckError {
         PckGeneric,
@@ -112,39 +108,46 @@ int Coordinator::startServer() {
 }
 
 int Coordinator::waitPiAndUy() {
-	int r, id1, id2;
-    int addrlen = sizeof(pi_addr);
+	int r, id, fd;
+	struct sockaddr_in addr;
+    int addrlen = sizeof(addr);
+	char caddr[20];
 	byte buf[12];
 	timeouts = 0;
 	
-	this->fd_pi = accept(this->fd_server, (struct sockaddr *)&pi_addr, (socklen_t*)&addrlen);
-	REPORTSPD_ERRNO(0 > this->fd_pi);
-	r = recv(this->fd_pi, &buf, 12, 0);
-	REPORTSPD_ERRNO(12 != r);
+	for(int i = 0; i < 2; i++) {
+		fd = accept(this->fd_server, (struct sockaddr *)&addr, (socklen_t*)&addrlen);
+		inet_ntop(AF_INET, &(addr.sin_addr), caddr, INET_ADDRSTRLEN);
+		REPORTSPD_ERRNO(0 > fd);
 
-	id1 = *((int*) buf);
-	imcols = *((int*) &buf[4]);
-	imrows = *((int*) &buf[8]);
-	imsize = imrows*imcols;
+		r = recv(fd, &buf, 12, 0);
+		REPORTSPD(r < 4, "Too few bytes ({}).", r);
 
-	r = send(this->fd_pi, (void*) &STX, 4, 0);
-
-	spdlog::info("Image sizes: {}x{} => raw size {}", imcols, imrows, imsize);
-
-	this->fd_uy = accept(this->fd_server, (struct sockaddr *)&pi_addr, (socklen_t*)&addrlen);
-	REPORTSPD_ERRNO(0 > this->fd_uy);
-	r = recv(this->fd_uy, &id2, 4, 0);
-	REPORTSPD(4 != r, "Wrong bytes number ({} != {}) for handshaking from Unity socket.", r, 4);
-
-
-	REPORTSPD(id1 != 27 && id1 != 54, "Wrong id received from first connected socket ({0} != 27 and {0} != 54)", id1);
-	REPORTSPD(id1 != 27 && id1 != 54, "Wrong id received from second connected socket ({0} != 27 and {0} != 54)", id2);
-
-	if(id1 == 54 && id2 == 27) {
-		int temp = this->fd_pi;
-		this->fd_pi = this->fd_uy;
-		this->fd_uy = temp;
+		id = *((int*) buf);
+		if(id == 27) {
+			if(r == 12) {
+				fd_pi = fd;
+				imcols = *((int*) &buf[4]);
+				imrows = *((int*) &buf[8]);
+				imsize = imrows*imcols;
+				SPDLOG_INFO("Connected to Pi: {}", caddr);
+				SPDLOG_INFO("Image sizes: {}x{} => raw size {}", imcols, imrows, imsize);
+				r = send(fd_pi, (void*) &STX, 4, 0);
+				REPORTSPD_ERRNO(r < 0);
+			} else {
+				SPDLOG_ERROR("Connected to Pi but received {} instead of 12 bytes.", r);
+				return -1;
+			}
+		} else {
+			REPORTSPD(id != 54, "Connected to some device but received wrong id ({}).", id);
+			REPORTSPD(r != 4, "Connected to Unity but received {} instead of 4 bytes.", r);
+			SPDLOG_INFO("Connected to Unity: {}", caddr);
+			fd_uy = fd;
+		}
 	}
+
+	REPORTSPD(fd_uy == -1, "Unity device not connected.");
+	REPORTSPD(fd_pi == -1, "Pi device not connected.");
 
 	ufds[0].fd = this->fd_pi;
 	ufds[0].events = POLLIN | POLLOUT; // check for normal or out-of-band
@@ -257,7 +260,7 @@ int Coordinator::elaborate() {
 
     byte color[3] = {250, 0, 0};
 	for(int i = nbbox-1; i >= 0; --i) {
-		spdlog::info("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
+		SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
 			ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
 
 		drawBbox(imraw, ncs->nn.bboxes[i].box, color);
@@ -338,7 +341,7 @@ int Coordinator::recvImages() {
 	while(1) {
 		int rl = recv(fd_pi, (byte*) rpacket, buffer_size, 0);
 		if(rl >= 0 ) {
-			spdlog::info("Received {} bytes to Unity.", rl);
+			SPDLOG_INFO("Received {} bytes to Unity.", rl);
 			if(rl > 0) {
 				int nbbox, sl;
 
@@ -347,21 +350,21 @@ int Coordinator::recvImages() {
 
 				sl = send(fd_uy, rpacket, buffer_size, isBMP ? MSG_WAITALL : 0);
 				REPORTSPD(sl < rl, "({} > {}).", rpacket->l + OH_SIZE, rl);
-				spdlog::info("Sent {} bytes to Unity.", sl);
+				SPDLOG_INFO("Sent {} bytes to Unity.", sl);
 
 
-				spdlog::info("Elaborating {} bytes...", rl);
+				SPDLOG_INFO("Elaborating {} bytes...", rl);
 				nbbox = elaborate();
-				spdlog::info("Elaborating done.");
+				SPDLOG_INFO("Elaborating done.");
 
 				if(nbbox >= 0) {
 					sl = send(fd_uy, &spacket, 12 + nbbox * sizeof(bbox), 0);
 					if(!sl) {
-						spdlog::info("Sent {} bboxes ({} bytes) to Unity.", nbbox, sl);
+						SPDLOG_INFO("Sent {} bboxes ({} bytes) to Unity.", nbbox, sl);
 						continue;
 					}
 				} else
-					spdlog::info("No bbox found.", nbbox, sl);
+					SPDLOG_INFO("No bbox found.", nbbox, sl);
 			}
 			else
 			if(rl == 0) {
@@ -383,18 +386,18 @@ int Coordinator::run(const char *graph, const char *meta, float thresh) {
 	int ret;
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
 
-	spdlog::info("NCS initialization...");
+	SPDLOG_INFO("NCS initialization...");
 	if(ncs->init()) exit(1);
-	spdlog::info("NCS initialization done.");
+	SPDLOG_INFO("NCS initialization done.");
 
 
 	ncs->nn.thresh = thresh;
 
 	ret = INT32_MAX;
 	while(1) {
-		spdlog::info("Socket starting...");
+		SPDLOG_INFO("Socket starting...");
 		if(startServer()) exit(1);
-		spdlog::info("Socket started.");
+		SPDLOG_INFO("Socket started.");
 
 		// if(ret != INT32_MAX) {
 		// 	if(spu.closeRead()) {
@@ -402,20 +405,20 @@ int Coordinator::run(const char *graph, const char *meta, float thresh) {
 		// 	}
 		// }
 
-		spdlog::info("Socket is waiting new incoming tcp connection at port {}...", port);
+		SPDLOG_INFO("Socket is waiting new incoming tcp connection at port {}...", port);
 		ret = waitPiAndUy();
         if(ret < 0) continue;
 
-		spdlog::info("Receiving started...", port);
+		SPDLOG_INFO("Receiving started...", port);
 		ret = recvImages();
         if(ret >= 0) {
 			break;
 		}
 
-		spdlog::info("Closing all...");
+		SPDLOG_INFO("Closing all...");
 		REPORTSPD(closeSockets() < 0, "Closing sockets error.")
 		else
-			spdlog::info("Sockets closed.");
+			SPDLOG_INFO("Sockets closed.");
 
 	}
 
@@ -445,7 +448,7 @@ int Coordinator::recv(int fd, void*buf, size_t len, int flags) {
 
 	REPORTSPD_ERRNO(r < 0)
 	else {
-		spdlog::debug("Recv {} bytes.", r);
+		SPDLOG_DEBUG("Recv {} bytes.", r);
 	}
 	
 	return r;
@@ -456,7 +459,7 @@ int Coordinator::send(int fd, void*buf, size_t len, int flags) {
 
 	REPORTSPD_ERRNO(r < 0)
 	else {
-		spdlog::debug("Sent {} bytes.", r);
+		SPDLOG_DEBUG("Sent {} bytes.", r);
 	}
 
 	return r;
