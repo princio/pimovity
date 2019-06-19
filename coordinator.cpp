@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <stdexcept>
 
+#include "include/spdlog/spdlog.h"
 #include "holooj.h"
 #include "coordinator.hpp"
 #include "ncs.hpp"
@@ -50,21 +51,23 @@ int decode_jpeg(byte *imj, int imjl, byte *im) {
     int w, h, ss, cl, ret;
     
     tjh = tjInitDecompress();
+	REPORTSPD(tjh == NULL, "DecJpeg Tj init error: «{}».", tjGetErrorStr());
 		
-    if(tjDecompressHeader3(tjh, imj, imjl, &w, &h, &ss, &cl)) {
-        REPORT(1, TjHeader, "(%s)", tjGetErrorStr());
-    }
+    ret = tjDecompressHeader3(tjh, imj, imjl, &w, &h, &ss, &cl);
+	REPORTSPD(ret, "DecJpeg Tj decompress header error: «{}».", tjGetErrorStr());
     switch(cl) {
-        case TJCS_CMYK: printf("CMYK"); break;
-        case TJCS_GRAY: printf("GRAY"); break;
-        case TJCS_RGB: printf("RGB"); break;
-        case TJCS_YCbCr: printf("YCbCr"); break;
-        case TJCS_YCCK: printf("YCCK"); break;
+        case TJCS_CMYK  :    printf("CMYK")  ;    break;
+        case TJCS_GRAY  :    printf("GRAY")  ;    break;
+        case TJCS_RGB   :    printf("RGB")   ;    break;
+        case TJCS_YCbCr :    printf("YCbCr") ;    break;
+        case TJCS_YCCK  :    printf("YCCK")  ;    break;
     }
-	REPORT(cl != TJCS_RGB, ImUnsopportedColorSpace, "");
+	REPORTSPD(cl != TJCS_RGB, "DecJpeg Tj error: Wrong color space (only RGB is supported?).»");
+
 	ret = tjDecompress2(tjh, imj, imjl, im, 0, 0, 0, TJPF_RGB, 0);
-	REPORT(ret, TjDecompress, "(%s)", tjGetErrorStr());
-    REPORT(tjDestroy(tjh), TjDestroy, "(%s)", tjGetErrorStr());
+	REPORTSPD(ret, "DecJpeg Tj decompress error: «{}»", tjGetErrorStr());
+
+    REPORTSPD(tjDestroy(tjh), "DecJpeg Tj destroying error: «{}»", tjGetErrorStr());
 
     return 0;
 }
@@ -72,7 +75,7 @@ int decode_jpeg(byte *imj, int imjl, byte *im) {
 int Coordinator::getAddress(struct in_addr *addr, const char *iface) {
 
 	struct ifaddrs *ifaddr, *ifa;
-	REPORT(-1 == getifaddrs(&ifaddr), SOAddr, "");
+	REPORTSPD_ERRNO(-1 == getifaddrs(&ifaddr));
 
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
 		int condition = !strcmp(ifa->ifa_name, iface) && ifa->ifa_addr && (ifa->ifa_addr->sa_family == AF_INET);
@@ -91,7 +94,7 @@ int Coordinator::startServer() {
 	int ret;
 
 	fd_server = socket(AF_INET, SOCK_STREAM, 0);
-	REPORT_ERRNO(0 > this->fd_server, SOCreation, "");
+	REPORTSPD_ERRNO(0 > this->fd_server);
 
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 	server_addr.sin_family = AF_INET;
@@ -100,10 +103,10 @@ int Coordinator::startServer() {
 	if(getAddress(&server_addr.sin_addr, iface.c_str())) return -1;
 
 	ret = bind(this->fd_server, (struct sockaddr *) &server_addr, sizeof(server_addr));
-	REPORT_ERRNO(0 > ret, SOBind, "");
+	REPORTSPD_ERRNO(0 > ret);
 
 	ret = listen(this->fd_server, 3);
-	REPORT_ERRNO(0 > ret, SOListening, "");
+	REPORTSPD_ERRNO(0 > ret);
 
 	return 0;
 }
@@ -115,23 +118,27 @@ int Coordinator::waitPiAndUy() {
 	timeouts = 0;
 	
 	this->fd_pi = accept(this->fd_server, (struct sockaddr *)&pi_addr, (socklen_t*)&addrlen);
-	REPORT_ERRNO(0 > this->fd_pi, SOAccept, "");
+	REPORTSPD_ERRNO(0 > this->fd_pi);
 	r = recv(this->fd_pi, &buf, 12, 0);
-	REPORT_ERRNO(12 != r, SORecv, "");
+	REPORTSPD_ERRNO(12 != r);
 
 	id1 = *((int*) buf);
 	imcols = *((int*) &buf[4]);
 	imrows = *((int*) &buf[8]);
 	imsize = imrows*imcols;
 
+	r = send(this->fd_pi, (void*) &STX, 4, 0);
+
+	spdlog::info("Image sizes: {}x{} => raw size {}", imcols, imrows, imsize);
+
 	this->fd_uy = accept(this->fd_server, (struct sockaddr *)&pi_addr, (socklen_t*)&addrlen);
-	REPORT_ERRNO(0 > this->fd_uy, SOAccept, "");
+	REPORTSPD_ERRNO(0 > this->fd_uy);
 	r = recv(this->fd_uy, &id2, 4, 0);
-	REPORT_ERRNO(4 != r, SORecv, "");
+	REPORTSPD(4 != r, "Wrong bytes number ({} != {}) for handshaking from Unity socket.", r, 4);
 
 
-	REPORT_ERRNO(id1 != 27 || id1 != 54, SOAccept, "");
-	REPORT_ERRNO(id2 != 27 || id2 != 54, SOAccept, "");
+	REPORTSPD(id1 != 27 && id1 != 54, "Wrong id received from first connected socket ({0} != 27 and {0} != 54)", id1);
+	REPORTSPD(id1 != 27 && id1 != 54, "Wrong id received from second connected socket ({0} != 27 and {0} != 54)", id2);
 
 	if(id1 == 54 && id2 == 27) {
 		int temp = this->fd_pi;
@@ -159,15 +166,15 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
     imj = tjAlloc((int) imjl);
     tjh = tjInitCompress();
     ret = tjCompress2(tjh, im, imcols, 3 * imcols, imrows, TJPF_BGR, &imj, &imjl, TJSAMP_444, 100, 0);
-    REPORT(ret, TjCompress, "(%s)", tjGetErrorStr());
-    REPORT(tjDestroy(tjh), TjDestroy, "(%s)", tjGetErrorStr());
+    REPORTSPD(ret, "image2jpeg: Tj compress error: «{}»", tjGetErrorStr());
+    REPORTSPD(tjDestroy(tjh), "image2jpeg: Tj destroy Error: «{}»)", tjGetErrorStr());
     char filename[30];
     sprintf(filename, "./phs/ph_%d.jpg", index);
     FILE *f = fopen(filename, "wb");
-    REPORT(f == NULL, GenericFile, "(fopen error)");
+    REPORTSPD(f == NULL, "image2jpeg: file {} creating error[{}]: «{}»", filename, errno, strerror(errno));
     ret = fwrite(imj, 1, imjl, f);
-    REPORT(ret < (int) imjl, GenericFile, "(fwrite error: %d instead of %lu)", ret, imjl);
-    REPORT(fclose(f), GenericFile, "(fclose error)");
+    REPORTSPD(ret < (int) imjl, "Saving image2jpeg file writing error: «{}» %d instead of %lu)", ret, imjl);
+    REPORTSPD(fclose(f), "image2jpeg: file closing error: «{}» %d instead of %lu)", ret, imjl);
 
 	tjFree(imj);
 
@@ -243,15 +250,14 @@ int Coordinator::undistortImage() {
 int Coordinator::elaborate() {
 	int nbbox;
 	if(!isBMP) {
-		int ret = decode_jpeg(rpacket->image, rpacket->l, imraw);
-		REPORT(ret, ImJpegDecoding, "Jpeg decoding failed.");
+		if(0 > decode_jpeg(rpacket->image, rpacket->l, imraw)) return -1;
 	}
 
 	nbbox = ncs->inference_byte(imraw, 3);
 
     byte color[3] = {250, 0, 0};
 	for(int i = nbbox-1; i >= 0; --i) {
-		printf("\t(%7.6f, %7.6f, %7.6f, %7.6f), o=%7.6f, p=%7.6f:\t\t%s\n",
+		spdlog::info("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
 			ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
 
 		drawBbox(imraw, ncs->nn.bboxes[i].box, color);
@@ -330,31 +336,37 @@ int Coordinator::recvImages() {
     }
 
 	while(1) {
-		int rl = recv(fd_pi, (byte*) rpacket, buffer_size, isBMP ? MSG_WAITALL : 0);
+		int rl = recv(fd_pi, (byte*) rpacket, buffer_size, 0);
 		if(rl >= 0 ) {
-			// printf("RECV:\t%5d\t%5d | %5d\n", rl, rpacket->index, rpacket->l);
+			spdlog::info("Received {} bytes to Unity.", rl);
 			if(rl > 0) {
 				int nbbox, sl;
 
-				REPORT(rpacket->stx != STX, PckSTX, "(%d != %d).", rpacket->stx, STX);
-				REPORT(rpacket->l + OH_SIZE > rl, PckTooSmall, "(%d > %d).", rpacket->l + OH_SIZE, rl);
+				REPORTSPD(rpacket->stx != STX, "({} != {}).", rpacket->stx, STX);
+				REPORTSPD(rpacket->l + OH_SIZE > rl, "({} > {}).", rpacket->l + OH_SIZE, rl);
 
 				sl = send(fd_uy, rpacket, buffer_size, isBMP ? MSG_WAITALL : 0);
-				REPORT(sl < rl, PckTooSmall, "(%d > %d).", rpacket->l + OH_SIZE, rl);
+				REPORTSPD(sl < rl, "({} > {}).", rpacket->l + OH_SIZE, rl);
+				spdlog::info("Sent {} bytes to Unity.", sl);
 
+
+				spdlog::info("Elaborating {} bytes...", rl);
 				nbbox = elaborate();
+				spdlog::info("Elaborating done.");
+
 				if(nbbox >= 0) {
 					sl = send(fd_uy, &spacket, 12 + nbbox * sizeof(bbox), 0);
 					if(!sl) {
-						printf("SEND:\t%-5d\t%5d | %5d\n\n", sl, spacket.index, spacket.n);
+						spdlog::info("Sent {} bboxes ({} bytes) to Unity.", nbbox, sl);
 						continue;
 					}
-				}
+				} else
+					spdlog::info("No bbox found.", nbbox, sl);
 			}
 			else
 			if(rl == 0) {
 				if(++nodata == 10) break;
-				printf("[Warning %s::%d]: recv return 0.\n", __FILE__, __LINE__);
+				spdlog::warn("No incoming packets #{}.", nodata);
 			}
 		}
 		else {
@@ -371,18 +383,18 @@ int Coordinator::run(const char *graph, const char *meta, float thresh) {
 	int ret;
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
 
-	printf("\nNCS initialization...");
+	spdlog::info("NCS initialization...");
 	if(ncs->init()) exit(1);
-	printf("OK\n");
+	spdlog::info("NCS initialization done.");
 
 
 	ncs->nn.thresh = thresh;
 
 	ret = INT32_MAX;
 	while(1) {
-		printf("\nSocket is starting...");
+		spdlog::info("Socket starting...");
 		if(startServer()) exit(1);
-		printf("OK\n");
+		spdlog::info("Socket started.");
 
 		// if(ret != INT32_MAX) {
 		// 	if(spu.closeRead()) {
@@ -390,20 +402,20 @@ int Coordinator::run(const char *graph, const char *meta, float thresh) {
 		// 	}
 		// }
 
-		printf("\nSocket is waiting new incoming tcp connection at port %d...", port);
+		spdlog::info("Socket is waiting new incoming tcp connection at port {}...", port);
 		ret = waitPiAndUy();
         if(ret < 0) continue;
-		printf("OK\n");
 
-		printf("Receiving started...\n");
+		spdlog::info("Receiving started...", port);
 		ret = recvImages();
         if(ret >= 0) {
 			break;
 		}
 
-		printf("\n\nClosing all...");
-		closeSockets();
-		printf("OK\n");
+		spdlog::info("Closing all...");
+		REPORTSPD(closeSockets() < 0, "Closing sockets error.")
+		else
+			spdlog::info("Sockets closed.");
 
 	}
 
@@ -414,13 +426,38 @@ int Coordinator::run(const char *graph, const char *meta, float thresh) {
 
 
 int Coordinator::closeSockets() {
-	int ret = 0;
-	ret += close(fd_pi);
-	if(ret < 0) printf("Error during closing Pi socket.");
-	ret += close(fd_uy);
-	if(ret < 0) printf("Error during closing Unity socket.");
-	ret += close(fd_server);
-	if(ret < 0) printf("Error during closing server socket.");
+	int r;
+	
+	r = close(fd_pi);
+	REPORTSPD(r < 0, "Error during closing Pi socket.");
 
-	return ret;
+	r = close(fd_uy);
+	REPORTSPD(r < 0, "Error during closing Unity socket.");
+
+	r = close(fd_server);
+	REPORTSPD(r < 0, "Error during closing Server socket.");
+
+	return 0;
+}
+
+int Coordinator::recv(int fd, void*buf, size_t len, int flags) {
+	int r = ::recv(fd, buf, len, flags);
+
+	REPORTSPD_ERRNO(r < 0)
+	else {
+		spdlog::debug("Recv {} bytes.", r);
+	}
+	
+	return r;
+}
+
+int Coordinator::send(int fd, void*buf, size_t len, int flags) {
+	int r = ::send(fd, buf, len, flags);
+
+	REPORTSPD_ERRNO(r < 0)
+	else {
+		spdlog::debug("Sent {} bytes.", r);
+	}
+
+	return r;
 }

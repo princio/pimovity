@@ -31,11 +31,11 @@ NCSerror ncs_errno;
 
 
 int NCS::parse_meta_file() {
-
+    int ret;
     char *buf;
     FILE *f = fopen(this->meta_path.c_str(), "r");
 
-    REPORT(f == NULL, NCSParseError, "Parsing error");
+    REPORTSPD((f == NULL || f == 0x0) ? -1 : 0, "NCS parsing error failed to open file “{}”: «[{}] {}»", meta_path, errno, strerror(errno));
 
     unsigned int length_read;
     fseek(f, 0, SEEK_END);
@@ -43,9 +43,8 @@ int NCS::parse_meta_file() {
     rewind(f);
 
     if(!(buf = (char*) malloc(length_read))) {
-        // couldn't allocate buffer
         fclose(f);
-        return -1;
+        REPORTSPD(1, "NCS parsing error: «couldn't allocate buffer».");
     }
 
     size_t to_read = length_read;
@@ -55,10 +54,10 @@ int NCS::parse_meta_file() {
         fclose(f);
         free(buf);
         buf = NULL;
-        return -1;
+        REPORTSPD(1, "NCS parsing error: «read wrong bytes number ({} != {})».", read_count, length_read);
     }
 
-    fclose(f);
+    REPORTSPD(fclose(f) != 0, "NCS parsing error during closing: «[{}] {}».", errno, strerror(errno));
     
     char *labels;
     char *anchors_text;
@@ -184,7 +183,7 @@ int NCS::load_nn(){
      */
     graph_file_ptr = fopen(this->graph_path.c_str(), "rb");
 
-    if(graph_file_ptr == NULL) return -1;
+    REPORTSPD(graph_file_ptr == NULL, "NCS loading NN error failed to open file “{}”: «[{}] {}»", graph_path, errno, strerror(errno));
 
     graph_len = 0;
     fseek(graph_file_ptr, 0, SEEK_END);
@@ -194,6 +193,7 @@ int NCS::load_nn(){
     if(!(graph_buf = malloc(graph_len))) {
         fclose(graph_file_ptr);
         REPORT(-1, NCSReadGraphFileError, "");
+        REPORTSPD(1, "NCS loading NN error: «couldn't allocate buffer».");
     }
 
     size_t to_read = graph_len;
@@ -203,10 +203,10 @@ int NCS::load_nn(){
         fclose(graph_file_ptr);
         free(graph_buf);
         graph_buf = NULL;
-        REPORT(-1, NCSReadGraphFileError, "");
+        REPORTSPD(1, "NCS loading NN error: «read wrong bytes number ({} != {})».", read_count, graph_len);
     }
 
-    fclose(graph_file_ptr);
+    REPORTSPD(fclose(graph_file_ptr) != 0, "NCS loading NN error during closing: «[{}] {}».", errno, strerror(errno));
 
 
     /**
@@ -216,13 +216,13 @@ int NCS::load_nn(){
 
 
     retCode = ncGraphCreate(this->nn.name, &graph_handle);
-    REPORT(retCode, NCSGraphCreateError, "");
+    REPORTSPD(retCode, "NCS loading NN: «[{}] graph create error».", retCode);
 
 
     retCode = ncGraphAllocateWithFifosEx(dev_handle, graph_handle, graph_buf, graph_len,
                                         &fifo_in, NC_FIFO_HOST_WO, 2, NC_FIFO_FP32,
                                         &fifo_out, NC_FIFO_HOST_RO, 2, NC_FIFO_FP32);
-    REPORT(retCode, NCSGraphAllocateError, "");
+    REPORTSPD(retCode, "NCS loading NN: «[{}] graph allocate error».", retCode);
 
     free(graph_buf);
 

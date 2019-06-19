@@ -1,10 +1,16 @@
 #ifndef __HOLOOJ_H__
 #define __HOLOOJ_H__
 
+
+#include <sstream>
+#include <boost/format.hpp>
+#include <iostream>
+#include "include/spdlog/spdlog.h"
+
 typedef unsigned char byte;
 typedef const int error;
 
-
+//int log_level = 0;
 
 typedef struct Box{
     float x, y, w, h;
@@ -64,6 +70,13 @@ typedef struct nnet {
         return -1;\
     }
 
+
+#define REPORTSPD_ERRNO( expr )\
+    if((expr)) {\
+        spdlog::error(" Error in [{}:{}]: {} [{}]", __FILE__, __LINE__, strerror(errno),  errno);\
+        return -1;\
+    }
+
 #define REPORT_ERRNO( expr, code, msg, ... )\
     if((expr) < 0) {\
         printf("\n[%s::%d] error "#code"=%d: " msg " [%d=%s].\n\n",\
@@ -71,6 +84,12 @@ typedef struct nnet {
         return -1;\
     }
 
+
+#define REPORTSPD( expr, msg, ... )\
+    if((expr) < 0) {\
+        spdlog::error("Error in [{}:{}]: " msg, __FILE__, __LINE__, ##__VA_ARGS__);\
+        return -1;\
+    }
 
 #define REPORT( expr, code, msg, ... )\
     if((expr) < 0) {\

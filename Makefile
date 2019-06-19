@@ -13,21 +13,21 @@ CC=gcc
 CPP=g++
 
 #common to both compiler and linker
-COMMON=-Iinclude/ -I.
+COMMON=-Iinclude/ -I. -DSPDLOG_COMPILED_LIB
 
 #only for compiler
 CFLAGS=-Wall -Wno-unused-result -Wno-unknown-pragmas -Wfatal-errors -O0 -g
 CPPFLAGS=-std=c++11
-LDFLAGS= -lmvnc -lm -ljpeg -lturbojpeg 
+LDFLAGS= -lmvnc -lm -ljpeg -lturbojpeg -lpthread
 
 EXEC=./debug/gengi
 
 
 
-all: clean gengi
+all: gengi
 
 
-gengi: debug/objs/ncs.o debug/objs/ny2.o debug/objs/coordinator.o debug/objs/main.o
+gengi: debug/objs/spdlog.o debug/objs/ncs.o debug/objs/ny2.o debug/objs/coordinator.o debug/objs/main.o
 	$(CPP)  $(COMMON) $(CFLAGS) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)
 
 debug/objs/%.o: %.cpp

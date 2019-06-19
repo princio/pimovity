@@ -14,33 +14,33 @@
 #include <ifaddrs.h>
 
 
-typedef enum {
-	GenericFile
-} GenericError;
+// typedef enum {
+// 	GenericFile
+// } GenericError;
 
-typedef enum {
-        SOCreation,
-        SOBind,
-        SOListening,
-        SOAccept,
-        SOSend,
-        SORecv,
-        SOAddr
-} SOError;
+// typedef enum {
+//         SOCreation,
+//         SOBind,
+//         SOListening,
+//         SOAccept,
+//         SOSend,
+//         SORecv,
+//         SOAddr
+// } SOError;
 
-typedef enum {
-        PollGeneric,
-        PollTimeout,
-        PollRecvBusy,
-        PollIn,
-        PollOut
-} PollError;
+// typedef enum {
+//         PollGeneric,
+//         PollTimeout,
+//         PollRecvBusy,
+//         PollIn,
+//         PollOut
+// } PollError;
 
-typedef enum {
-        ImJpegDecoding,
-        ImWrongSize,
-        ImUnsopportedColorSpace
-} ImError;
+// typedef enum {
+//         ImJpegDecoding,
+//         ImWrongSize,
+//         ImUnsopportedColorSpace
+// } ImError;
 
 
 typedef struct RecvPacket
@@ -87,6 +87,8 @@ class Coordinator {
         unsigned int port;
         bool isBMP = false;
         Coordinator(const char *iface, int port) : iface(iface), port(port) {};
+        int recv(int fd, void* buf, size_t len, int flags);
+        int send(int fd, void* buf, size_t len, int flags);
         int getAddress(struct in_addr *addr, const char *iface);
         int startServer();
         int waitPiAndUy();
