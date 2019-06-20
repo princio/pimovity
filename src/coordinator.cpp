@@ -27,6 +27,8 @@
 #include <unistd.h>
 #include <stdexcept>
 
+#include <opencv2/opencv.hpp>
+
 #define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
 #define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
 

@@ -20,6 +20,7 @@ set(CMAKE_TARGET_DEFINITIONS_CXX
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../include"
   "/home/developer/spdlog/bin/include"
+  "/home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4"
   )
 
 # Targets to which this target links.
