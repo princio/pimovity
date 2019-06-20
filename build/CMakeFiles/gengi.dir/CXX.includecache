@@ -107,6 +107,8 @@ stdexcept
 -
 opencv2/opencv.hpp
 -
+opencv2/imgcodecs.hpp
+-
 
 /home/developer/Desktop/pr2/src/main.cpp
 holooj.hpp
@@ -130,6 +132,12 @@ stdint.h
 errno.h
 -
 time.h
+-
+opencv2/opencv.hpp
+-
+opencv2/imgcodecs.hpp
+-
+opencv2/imgproc.hpp
 -
 
 /home/developer/Desktop/pr2/src/ncs.cpp

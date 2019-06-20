@@ -28,6 +28,7 @@
 #include <stdexcept>
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
 #define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
@@ -94,7 +95,7 @@ int Coordinator::getAddress(struct in_addr *addr, const char *iface) {
 }
 
 int Coordinator::startServer() {
-	SPDLOG_DEBUG("Start.");
+	SPDLOG_TRACE("Start.");
 	int ret;
 	char caddr[20];
 
@@ -115,12 +116,12 @@ int Coordinator::startServer() {
 	ret = listen(this->fd_server, 3);
 	REPORTSPD_ERRNO(0 > ret);
 
-	SPDLOG_DEBUG("End.");
+	SPDLOG_TRACE("End.");
 	return 0;
 }
 
 int Coordinator::waitPiAndUy() {
-	SPDLOG_DEBUG("Start.");
+	SPDLOG_TRACE("Start.");
 	int r, id, fd;
 	struct sockaddr_in addr;
     int addrlen = sizeof(addr);
@@ -166,7 +167,7 @@ int Coordinator::waitPiAndUy() {
 	ufds[1].fd = this->fd_uy;
 	ufds[1].events = POLLIN | POLLOUT; // check for normal or out-of-band
 
-	SPDLOG_DEBUG("End.");
+	SPDLOG_TRACE("End.");
 	return 0;
 }
 
@@ -196,7 +197,6 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
 
     return 0;
 }
-
 
 void Coordinator::drawBbox(byte *im, Box b, byte color[3]) {
     int w = imcols;
@@ -257,7 +257,6 @@ void Coordinator::drawBbox(byte *im, Box b, byte color[3]) {
     }
 }
 
-
 int Coordinator::undistortImage() {
 	return 0;
 }
@@ -265,12 +264,26 @@ int Coordinator::undistortImage() {
 int Coordinator::elaborate() {
 	SPDLOG_DEBUG("Start elaborating {} bytes.", rpacket->l);
 	int nbbox;
+	cv::Mat mat_dst;
 	if(!isBMP) {
-		if(0 > decode_jpeg(rpacket->image, rpacket->l, imraw)) return -1;
-		SPDLOG_DEBUG("Jpeg image decoded.");
+
+		if(0) {
+			if(0 > decode_jpeg(rpacket->image, rpacket->l, imraw)) return -1;
+			SPDLOG_DEBUG("Jpeg image decoded.");
+		} else {
+			cv::Mat mat_im(imcols, imrows, CV_8UC3, rpacket->image);
+			cv::Mat mat_dst;
+			auto mat = cv::imdecode(mat_im, cv::IMREAD_COLOR);
+			cv::resize(mat_im, mat_dst, cv::Size(100, 200));
+			std::cout << mat_dst.type() << std::endl;
+			mat_dst.convertTo(mat_dst, CV_32FC3);
+			std::cout << mat_dst.type() << std::endl;
+		}
 	}
 
-	nbbox = ncs->inference_byte(imraw, 3);
+	ncs->nn.input = (float*) mat_dst.data;
+	ncs->nn.input_size_byte = mat_dst.total() * 4;
+	nbbox = ncs->inference(3);
 
     byte color[3] = {250, 0, 0};
 	for(int i = nbbox-1; i >= 0; --i) {

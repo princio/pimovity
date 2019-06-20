@@ -148,7 +148,7 @@ Box NY2::get_region_box(float *x, int n, int index, int i, int j)
 
 int NY2::get_bboxes(int nbboxes_max)
 {
-    SPDLOG_DEBUG("Start.");
+    SPDLOG_TRACE("Start.");
     int i,j,n;
     int wh = this->nn->out_w * this->nn->out_h;
     int b = 0;
@@ -215,14 +215,14 @@ int NY2::get_bboxes(int nbboxes_max)
             }
         }
     }
-    SPDLOG_DEBUG("End.");
+    SPDLOG_TRACE("End.");
     return nbbox;
 }
 
 NY2::NY2(nnet *nn) { this->nn = nn; }
 
 int NY2::inference(int nbboxes_max) {
-    SPDLOG_DEBUG("Start.");
+    SPDLOG_TRACE("Start.");
 
 #ifdef NOMOVIDIUS
     int i = -1;
@@ -235,6 +235,6 @@ int NY2::inference(int nbboxes_max) {
 #endif
 
     int nb = this->get_bboxes(nbboxes_max);
-    SPDLOG_DEBUG("End.");
+    SPDLOG_TRACE("End.");
     return nb;
 }
