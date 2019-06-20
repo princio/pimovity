@@ -3,5 +3,6 @@
         "cstring": "cpp",
         "cstdint": "cpp",
         "string": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": false
 }

@@ -214,6 +214,12 @@ int NCS::load_nn(){
 }
 
 int NCS::init() {
+    if(this->isInit) {
+        SPDLOG_INFO("NCS already initialized.");
+        return 0;
+    }
+    SPDLOG_DEBUG("Start.");
+
     if(this->parse_meta_file())
         return -1;
 
@@ -247,6 +253,8 @@ int NCS::init() {
 
     this->ny2 = new NY2(&this->nn);
 
+    isInit = true;
+    SPDLOG_DEBUG("End.");
     return 0;
 
 }
@@ -259,6 +267,8 @@ NCS::NCS(const char *graph, const char *meta, NCSNNType nntype) {
 
 
 int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
+    SPDLOG_DEBUG("Start.");
+
 	int i = 0;
     int letterbox = this->nn.in_c * this->nn.in_w * ((this->nn.in_h - this->nn.im_rows) >> 1);
     int l = this->nn.im_rows * this->nn.im_cols * this->nn.in_c;
@@ -282,11 +292,13 @@ int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
     
     if(nbbox < 0) return -1;
 
+    SPDLOG_DEBUG("End.");
     return nbbox;
 }
 
 
 int NCS::inference(int nbboxes_max) {
+    SPDLOG_DEBUG("Start.");
 
     unsigned int length_bytes;
     unsigned int returned_opt_size;
@@ -313,6 +325,7 @@ int NCS::inference(int nbboxes_max) {
         break;
     }
     
+    SPDLOG_DEBUG("End.");
     return nbbox;
 }
 

@@ -27,6 +27,9 @@
 #include <unistd.h>
 #include <stdexcept>
 
+#define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
+#define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
+
 typedef enum PckError {
         PckGeneric,
         PckSTX,
@@ -45,25 +48,27 @@ typedef enum TjError {
 int decode_jpeg(byte *imj, int imjl, byte *im) {
     tjhandle tjh;
     int w, h, ss, cl, ret;
+	std::string color_space;
     
     tjh = tjInitDecompress();
-	REPORTSPD(tjh == NULL, "DecJpeg Tj init error: «{}».", tjGetErrorStr());
+	REPORTSPD(tjh == NULL, "Tj init error: «{}».", tjGetErrorStr());
 		
     ret = tjDecompressHeader3(tjh, imj, imjl, &w, &h, &ss, &cl);
-	REPORTSPD(ret, "DecJpeg Tj decompress header error: «{}».", tjGetErrorStr());
+	REPORTSPD(ret, "Tj decompress header error: «{}».", tjGetErrorStr());
     switch(cl) {
-        case TJCS_CMYK  :    printf("CMYK")  ;    break;
-        case TJCS_GRAY  :    printf("GRAY")  ;    break;
-        case TJCS_RGB   :    printf("RGB")   ;    break;
-        case TJCS_YCbCr :    printf("YCbCr") ;    break;
-        case TJCS_YCCK  :    printf("YCCK")  ;    break;
+        case TJCS_CMYK  :    color_space = "CMYK"  ;    break;
+        case TJCS_GRAY  :    color_space = "GRAY"  ;    break;
+        case TJCS_RGB   :    color_space = "RGB"   ;    break;
+        case TJCS_YCbCr :    color_space = "YCbCr" ;    break;
+        case TJCS_YCCK  :    color_space = "YCCK"  ;    break;
     }
-	REPORTSPD(cl != TJCS_RGB, "DecJpeg Tj error: Wrong color space (only RGB is supported?).»");
+	//REPORTSPD(cl != TJCS_RGB, "Tj error: «Wrong color space (only RGB is supported?), {} instead of {}.»", cl, TJCS_RGB);
+	SPDLOG_INFO("Color space is {}", color_space);
 
 	ret = tjDecompress2(tjh, imj, imjl, im, 0, 0, 0, TJPF_RGB, 0);
-	REPORTSPD(ret, "DecJpeg Tj decompress error: «{}»", tjGetErrorStr());
+	REPORTSPD(ret, "Tj decompress error: «{}»", tjGetErrorStr());
 
-    REPORTSPD(tjDestroy(tjh), "DecJpeg Tj destroying error: «{}»", tjGetErrorStr());
+    REPORTSPD(tjDestroy(tjh), "Tj destroying error: «{}»", tjGetErrorStr());
 
     return 0;
 }
@@ -87,7 +92,9 @@ int Coordinator::getAddress(struct in_addr *addr, const char *iface) {
 }
 
 int Coordinator::startServer() {
+	SPDLOG_DEBUG("Start.");
 	int ret;
+	char caddr[20];
 
 	fd_server = socket(AF_INET, SOCK_STREAM, 0);
 	REPORTSPD_ERRNO(0 > this->fd_server);
@@ -97,6 +104,8 @@ int Coordinator::startServer() {
 	server_addr.sin_port = htons(port);
 
 	if(getAddress(&server_addr.sin_addr, iface.c_str())) return -1;
+	inet_ntop(AF_INET, &(server_addr.sin_addr), caddr, INET_ADDRSTRLEN);
+	SPDLOG_INFO("Socket Server started at: {}:{}", caddr, port);
 
 	ret = bind(this->fd_server, (struct sockaddr *) &server_addr, sizeof(server_addr));
 	REPORTSPD_ERRNO(0 > ret);
@@ -104,10 +113,12 @@ int Coordinator::startServer() {
 	ret = listen(this->fd_server, 3);
 	REPORTSPD_ERRNO(0 > ret);
 
+	SPDLOG_DEBUG("End.");
 	return 0;
 }
 
 int Coordinator::waitPiAndUy() {
+	SPDLOG_DEBUG("Start.");
 	int r, id, fd;
 	struct sockaddr_in addr;
     int addrlen = sizeof(addr);
@@ -129,11 +140,9 @@ int Coordinator::waitPiAndUy() {
 				fd_pi = fd;
 				imcols = *((int*) &buf[4]);
 				imrows = *((int*) &buf[8]);
-				imsize = imrows*imcols;
+				imsize = imrows*imcols*3;
 				SPDLOG_INFO("Connected to Pi: {}", caddr);
 				SPDLOG_INFO("Image sizes: {}x{} => raw size {}", imcols, imrows, imsize);
-				r = send(fd_pi, (void*) &STX, 4, 0);
-				REPORTSPD_ERRNO(r < 0);
 			} else {
 				SPDLOG_ERROR("Connected to Pi but received {} instead of 12 bytes.", r);
 				return -1;
@@ -155,6 +164,7 @@ int Coordinator::waitPiAndUy() {
 	ufds[1].fd = this->fd_uy;
 	ufds[1].events = POLLIN | POLLOUT; // check for normal or out-of-band
 
+	SPDLOG_DEBUG("End.");
 	return 0;
 }
 
@@ -251,9 +261,11 @@ int Coordinator::undistortImage() {
 }
 
 int Coordinator::elaborate() {
+	SPDLOG_DEBUG("Start elaborating {} bytes.", rpacket->l);
 	int nbbox;
 	if(!isBMP) {
 		if(0 > decode_jpeg(rpacket->image, rpacket->l, imraw)) return -1;
+		SPDLOG_DEBUG("Jpeg image decoded.");
 	}
 
 	nbbox = ncs->inference_byte(imraw, 3);
@@ -279,6 +291,7 @@ int Coordinator::elaborate() {
         saveImage2Jpeg(imraw, ++imcounter);
 	}
 
+	SPDLOG_DEBUG("Finished elaborating: found {} nbboxes.", nbbox);
 	return nbbox;
 }	
 
@@ -325,8 +338,16 @@ int Coordinator::elaborate() {
 // 	return ret;
 // }
 
+int Coordinator::recvImage() {
+	int rl = recv(fd_pi, (byte*) rpacket, 8, 0);
+	REPORTSPD(rpacket->stx != STX, "Wrong STX ({} instead of {}).", rpacket->stx, STX);
+	rl = recv(fd_pi, (byte*) rpacket->image, rpacket->l, MSG_WAITALL);
+	REPORTSPD(rpacket->stx != STX, "Too few bytes received ({} instead of {}).", rl, rpacket->l);
+	return 0;
+}
+
 int Coordinator::recvImages() {
-	int nodata = 0;
+	int consecutive_wrong_packets = 0, r;
 	rpacket = (RecvPacket *) calloc(buffer_size, 1);
 	memset(&spacket, 0, sizeof(SendPacket));
 	spacket.stx = STX;
@@ -338,42 +359,41 @@ int Coordinator::recvImages() {
         imraw = rpacket->image;
     }
 
+	SEND(r, fd_pi, (void*) &STX, 4, 0);
+	REPORTSPD(r != 4, "Sent wrong bytes number to Pi ({} instead of 4)", r);
+	SEND(r, fd_uy, (void*) &STX, 4, 0);
+	REPORTSPD(r != 4, "Sent wrong bytes number to Unity ({} instead of 4)", r);
+	SPDLOG_INFO("Sent STX to Pi and Unity to start exchage.");
+
 	while(1) {
-		int rl = recv(fd_pi, (byte*) rpacket, buffer_size, 0);
-		if(rl >= 0 ) {
-			SPDLOG_INFO("Received {} bytes to Unity.", rl);
-			if(rl > 0) {
-				int nbbox, sl;
+		int nbbox, sl;
 
-				REPORTSPD(rpacket->stx != STX, "({} != {}).", rpacket->stx, STX);
-				REPORTSPD(rpacket->l + OH_SIZE > rl, "({} > {}).", rpacket->l + OH_SIZE, rl);
-
-				sl = send(fd_uy, rpacket, buffer_size, isBMP ? MSG_WAITALL : 0);
-				REPORTSPD(sl < rl, "({} > {}).", rpacket->l + OH_SIZE, rl);
-				SPDLOG_INFO("Sent {} bytes to Unity.", sl);
-
-
-				SPDLOG_INFO("Elaborating {} bytes...", rl);
-				nbbox = elaborate();
-				SPDLOG_INFO("Elaborating done.");
-
-				if(nbbox >= 0) {
-					sl = send(fd_uy, &spacket, 12 + nbbox * sizeof(bbox), 0);
-					if(!sl) {
-						SPDLOG_INFO("Sent {} bboxes ({} bytes) to Unity.", nbbox, sl);
-						continue;
-					}
-				} else
-					SPDLOG_INFO("No bbox found.", nbbox, sl);
-			}
-			else
-			if(rl == 0) {
-				if(++nodata == 10) break;
-				spdlog::warn("No incoming packets #{}.", nodata);
+		if(recvImage()) {
+			if(++consecutive_wrong_packets == 10) {
+				SPDLOG_WARN("Wrong incoming packets from Pi for 10 consecutive times. Stop loop.");
+				break;
+			} else {
+				SPDLOG_WARN("Wrong incoming packet from Pi: skip to next while iteration (consecutives = {}).", consecutive_wrong_packets);
+				continue;
 			}
 		}
-		else {
-			break;
+		consecutive_wrong_packets = 0;
+
+		sl = send(fd_uy, rpacket, rpacket->l + 8, 0);
+		// REPORTSPD(sl < rl, "({} > {}).", rpacket->l + OH_SIZE, rl);
+
+		nbbox = elaborate();
+
+		if(nbbox > 0) {
+			int size = 12 + nbbox * sizeof(bbox);
+			SEND(sl, fd_uy, &spacket, size, 0);
+			SPDLOG_INFO("Sent {} bboxes ({} bytes) to Unity.", nbbox, sl);
+			continue;
+		} else
+		if(nbbox == 0) {
+			SPDLOG_INFO("No bbox found.", nbbox, sl);
+		} else {
+			return -1;
 		}
 		usleep(1000000);
 	}
@@ -386,36 +406,26 @@ int Coordinator::run(const char *graph, const char *meta, float thresh) {
 	int ret;
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
 
-	SPDLOG_INFO("NCS initialization...");
-	if(ncs->init()) exit(1);
-	SPDLOG_INFO("NCS initialization done.");
 
 
 	ncs->nn.thresh = thresh;
 
 	ret = INT32_MAX;
 	while(1) {
-		SPDLOG_INFO("Socket starting...");
 		if(startServer()) exit(1);
-		SPDLOG_INFO("Socket started.");
-
-		// if(ret != INT32_MAX) {
-		// 	if(spu.closeRead()) {
-		// 		break;
-		// 	}
-		// }
 
 		SPDLOG_INFO("Socket is waiting new incoming tcp connection at port {}...", port);
 		ret = waitPiAndUy();
         if(ret < 0) continue;
 
-		SPDLOG_INFO("Receiving started...", port);
+
+		if(ncs->init()) exit(1);
+
 		ret = recvImages();
         if(ret >= 0) {
 			break;
 		}
 
-		SPDLOG_INFO("Closing all...");
 		REPORTSPD(closeSockets() < 0, "Closing sockets error.")
 		else
 			SPDLOG_INFO("Sockets closed.");
@@ -448,7 +458,7 @@ int Coordinator::recv(int fd, void*buf, size_t len, int flags) {
 
 	REPORTSPD_ERRNO(r < 0)
 	else {
-		SPDLOG_DEBUG("Recv {} bytes.", r);
+		SPDLOG_DEBUG("Recv {} bytes from {}.", r, fd == fd_pi ? "Pi" : "Unity");
 	}
 	
 	return r;
@@ -459,7 +469,7 @@ int Coordinator::send(int fd, void*buf, size_t len, int flags) {
 
 	REPORTSPD_ERRNO(r < 0)
 	else {
-		SPDLOG_DEBUG("Sent {} bytes.", r);
+		SPDLOG_DEBUG("Sent {} bytes to {}.", r, fd == fd_pi ? "Pi" : "Unity");
 	}
 
 	return r;

@@ -2,6 +2,7 @@ calib/images/*
 images2/
 *.bak
 *.tar.gz
+debug/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

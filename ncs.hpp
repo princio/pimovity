@@ -34,6 +34,7 @@ class NCS {
         int nms_comparator(const void *pa, const void *pb);
         void correct_region_boxes();
     public:
+        bool isInit = false;
         nnet nn;
         detection *dets;
         bbox *bboxes;

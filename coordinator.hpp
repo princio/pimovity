@@ -94,6 +94,7 @@ class Coordinator {
         int waitPiAndUy();
         int closeSockets();
         int recvConfig();
+        int recvImage();
         int recvImages();
         int elaborate();
         int saveImage2Jpeg(byte *im, int index);
