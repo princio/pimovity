@@ -141,11 +141,15 @@ int Coordinator::waitPiAndUy() {
 		if(id == 27) {
 			if(r == 12) {
 				fd_pi = fd;
-				imcols = *((int*) &buf[4]);
-				imrows = *((int*) &buf[8]);
-				imsize = imrows*imcols*3;
+				ncs->nn.im_cols = *((int*) &buf[4]);
+				ncs->nn.im_rows = *((int*) &buf[8]);
+
+				imcols_resized = ncs->nn.in_w;
+				imrows_resized = ncs->nn.im_rows * ((double) imcols_resized / ncs->nn.im_cols);
+				imsize_resized = imcols_resized * imrows_resized;
+
 				SPDLOG_INFO("Connected to Pi: {}", caddr);
-				SPDLOG_INFO("Image sizes: {}x{} => raw size {}", imcols, imrows, imsize);
+				SPDLOG_INFO("Image sizes: {}x{} => raw size {}", ncs->nn.im_cols, ncs->nn.im_rows, ncs->nn.im_cols*ncs->nn.im_rows);
 			} else {
 				SPDLOG_ERROR("Connected to Pi but received {} instead of 12 bytes.", r);
 				return -1;
@@ -181,7 +185,7 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
     imjl = 200000;
     imj = tjAlloc((int) imjl);
     tjh = tjInitCompress();
-    ret = tjCompress2(tjh, im, imcols, 3 * imcols, imrows, TJPF_BGR, &imj, &imjl, TJSAMP_444, 100, 0);
+    ret = tjCompress2(tjh, im, ncs->nn.im_cols, 3 * ncs->nn.im_cols, ncs->nn.im_rows, TJPF_BGR, &imj, &imjl, TJSAMP_444, 100, 0);
     REPORTSPD(ret, "image2jpeg: Tj compress error: «{}»", tjGetErrorStr());
     REPORTSPD(tjDestroy(tjh), "image2jpeg: Tj destroy Error: «{}»)", tjGetErrorStr());
     char filename[30];
@@ -199,8 +203,8 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
 }
 
 void Coordinator::drawBbox(byte *im, Box b, byte color[3]) {
-    int w = imcols;
-    int h = imrows;
+    int w = ncs->nn.im_cols;
+    int h = ncs->nn.im_rows;
 
 
     int left  = (b.x-b.w/2.)*w;
@@ -229,10 +233,10 @@ void Coordinator::drawBbox(byte *im, Box b, byte color[3]) {
             memcpy(&im[k + top_row - border_line], color, 3);
             memcpy(&im[k + bot_row + border_line], color, 3); 
 
-			if(a < 0 || a > imcols*imrows*3) {
+			if(a < 0 || a > w * h * 3) {
 				printf("a: %d", a);
 			}
-			if(b < 0 || b > imcols*imrows*3) {
+			if(b < 0 || b > w * h * 3) {
 				printf("b: %d", b);
 			}
         }
@@ -245,10 +249,10 @@ void Coordinator::drawBbox(byte *im, Box b, byte color[3]) {
 			int d = pixel_right + wh;
             memcpy(&im[pixel_left  - wh], color, 3);
             memcpy(&im[pixel_right + wh], color, 3);
-			if(c < 0 || c > imcols*imrows*3) {
+			if(c < 0 || c > w * h * 3) {
 				printf("c: %d", c);
 			}
-			if(d < 0 || d > imcols*imrows*3) {
+			if(d < 0 || d > w * h * 3) {
 				printf("d: %d", d);
 			}
         }
@@ -264,25 +268,25 @@ int Coordinator::undistortImage() {
 int Coordinator::elaborate() {
 	SPDLOG_DEBUG("Start elaborating {} bytes.", rpacket->l);
 	int nbbox;
-	cv::Mat mat_dst;
+	cv::Mat mat_raw_resized;
+	float *pointer = (ncs->nn.input + ((ncs->nn.in_h - imrows_resized) >> 1));
 	if(!isBMP) {
 
 		if(0) {
 			if(0 > decode_jpeg(rpacket->image, rpacket->l, imraw)) return -1;
 			SPDLOG_DEBUG("Jpeg image decoded.");
 		} else {
-			cv::Mat mat_im(imcols, imrows, CV_8UC3, rpacket->image);
-			cv::Mat mat_dst;
-			auto mat = cv::imdecode(mat_im, cv::IMREAD_COLOR);
-			cv::resize(mat_im, mat_dst, cv::Size(100, 200));
-			std::cout << mat_dst.type() << std::endl;
-			mat_dst.convertTo(mat_dst, CV_32FC3);
-			std::cout << mat_dst.type() << std::endl;
+			cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
+			auto mat_raw = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
+			cv::resize(mat_raw, mat_raw_resized, cv::Size(imcols_resized, imrows_resized));
+			std::cout << mat_raw_resized.type() << std::endl;
+			mat_raw_resized.convertTo(mat_raw_resized, CV_32FC3);
+			std::cout << mat_raw_resized.type() << std::endl;
 		}
 	}
+	REPORTSPD(mat_raw_resized.total() != imsize_resized, "Resizing sizes not matching yolov2 input: {} instead of {}.", mat_raw_resized.total(), imsize_resized);
 
-	ncs->nn.input = (float*) mat_dst.data;
-	ncs->nn.input_size_byte = mat_dst.total() * 4;
+	memcpy(pointer, mat_raw_resized.data, imsize_resized*4);
 	nbbox = ncs->inference(3);
 
     byte color[3] = {250, 0, 0};
@@ -290,7 +294,7 @@ int Coordinator::elaborate() {
 		SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
 			ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
 
-		drawBbox(imraw, ncs->nn.bboxes[i].box, color);
+		//drawBbox(imraw, ncs->nn.bboxes[i].box, color);
 	}
 
 	if(nbbox >= 0) {
@@ -368,7 +372,7 @@ int Coordinator::recvImages() {
 	spacket.stx = STX;
 	ncs->nn.bboxes = spacket.bboxes;
 	if(!isBMP) {
-		imraw = (byte*) calloc(imsize, 1);
+		imraw = (byte*) calloc(ncs->nn.im_rows*ncs->nn.im_cols*3, 1);
 	}
     else {
         imraw = rpacket->image;
@@ -420,7 +424,7 @@ int Coordinator::recvImages() {
 int Coordinator::run(const char *graph, const char *meta, float thresh) {
 	int ret;
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
-
+	ncs->initNN();
 
 
 	ncs->nn.thresh = thresh;
@@ -434,7 +438,7 @@ int Coordinator::run(const char *graph, const char *meta, float thresh) {
         if(ret < 0) continue;
 
 
-		if(ncs->init()) exit(1);
+		if(ncs->initDevice()) exit(1);
 
 		ret = recvImages();
         if(ret >= 0) {

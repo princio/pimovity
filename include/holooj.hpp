@@ -11,7 +11,11 @@
 typedef unsigned char byte;
 typedef const int error;
 
-//int log_level = 0;
+typedef struct rgb_pixel {
+    byte r;
+    byte g;
+    byte b;
+} rgb_pixel;
 
 typedef struct Box{
     float x, y, w, h;
@@ -74,7 +78,7 @@ typedef struct nnet {
 
 #define REPORTSPD_ERRNO( expr )\
     if((expr)) {\
-        SPDLOG_ERROR(" Error in [{}:{}]: {} [{}]", __FILE__, __LINE__, strerror(errno),  errno);\
+        SPDLOG_ERROR("{} [{}]", strerror(errno),  errno);\
         return -1;\
     }
 
@@ -88,7 +92,7 @@ typedef struct nnet {
 
 #define REPORTSPD( expr, msg, ... )\
     if((expr)) {\
-        SPDLOG_ERROR("Error in [{}:{}]: " msg, __FILE__, __LINE__, ##__VA_ARGS__);\
+        SPDLOG_ERROR(msg, ##__VA_ARGS__);\
         return -1;\
     }
 

@@ -173,6 +173,7 @@ CMakeFiles/gengi.dir/src/main.cpp.o
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/core/base.hpp
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/core/bufferpool.hpp
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/core/check.hpp
+ /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/core/core.hpp
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/core/cuda.hpp
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/core/cuda.inl.hpp
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/core/cuda_types.hpp
@@ -239,6 +240,7 @@ CMakeFiles/gengi.dir/src/main.cpp.o
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/flann/saving.h
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/flann/timer.h
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/highgui.hpp
+ /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/highgui/highgui.hpp
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/imgcodecs.hpp
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/imgproc.hpp
  /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4/opencv2/ml.hpp

@@ -64,9 +64,9 @@ class Coordinator {
         RecvPacket *rpacket;
         SendPacket  spacket;
         byte *imraw;
-        int imcols;
-        int imrows;
-        int imsize;
+        int imcols_resized;
+        int imrows_resized;
+        int imsize_resized;
         int imcounter = -1;
         float thresh = 0.5;
         const int OH_SIZE = 12;

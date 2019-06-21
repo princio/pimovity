@@ -186,8 +186,8 @@ int NCS::parse_meta_file() {
 
 int NCS::load_nn(){
     SPDLOG_DEBUG("Starting «load_nn»");
-    int used_memory, total_memory;
-    unsigned int graph_len = 0, data_length;
+    int used_memory = 0, total_memory = 0;
+    unsigned int graph_len = 0, data_length = 4;
     char *buf;
 
     if(file2bytes(graph_path.c_str(), &buf, &graph_len)) return -1;
@@ -213,11 +213,11 @@ int NCS::load_nn(){
     return 0;
 }
 
-int NCS::init() {
-    if(this->isInit) {
-        SPDLOG_INFO("NCS already initialized.");
-        return 0;
-    }
+int NCS::initNN() {
+    // if(this->isInit) {
+    //     SPDLOG_INFO("NCS already initialized.");
+    //     return 0;
+    // }
     SPDLOG_TRACE("Start.");
 
     if(this->parse_meta_file())
@@ -232,7 +232,9 @@ int NCS::init() {
 
     this->nn.input = (float*) calloc(this->nn.input_size_byte, 1);
     this->nn.output = (float*) calloc(this->nn.output_size_byte, 1);
+}
 
+int NCS::initDevice() {
     retCode = ncDeviceCreate(0, &dev_handle);
     SPDLOG_DEBUG("Creating device...");
     REPORTSPD(retCode, "«device creating error» [{}].", retCode);
@@ -256,7 +258,6 @@ int NCS::init() {
     isInit = true;
     SPDLOG_TRACE("End.");
     return 0;
-
 }
 
 NCS::NCS(const char *graph, const char *meta, NCSNNType nntype) {
@@ -264,7 +265,6 @@ NCS::NCS(const char *graph, const char *meta, NCSNNType nntype) {
     this->meta_path = meta;
     this->nn.type = nntype;
 }
-
 
 int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
     SPDLOG_TRACE("Start.");
@@ -306,16 +306,16 @@ int NCS::inference(int nbboxes_max) {
     unsigned int out_size_bytes = this->nn.output_size_byte;
 
     retCode = ncGraphQueueInferenceWithFifoElem(graph_handle, fifo_in, fifo_out, this->nn.input, &in_size_bytes, 0);
-    REPORTSPD(retCode, "«NCS inference error.» [{}]", retCode);
+    REPORTSPD(retCode, "InferenceWithFifoElem [{}]: «input_size_byte = {}»", retCode, this->nn.input_size_byte);
 
     returned_opt_size = 4;
     retCode = ncFifoGetOption(fifo_out, NC_RO_FIFO_ELEMENT_DATA_SIZE, &length_bytes, &returned_opt_size);
-    REPORTSPD(retCode, "«NCS get option error.» [{}]", retCode);
+    REPORTSPD(retCode, "ncFifoGetOption [{}]", retCode);
 
     REPORTSPD(length_bytes != out_size_bytes, "«Too few bytes read from fifo output ({} != {})»", length_bytes, out_size_bytes);
 
     retCode = ncFifoReadElem(fifo_out, this->nn.output, &length_bytes, NULL);
-    REPORTSPD(retCode, "«NCS fifo read error.» [{}]", retCode);
+    REPORTSPD(retCode, "ncFifoReadElem [{}]", retCode);
 
     int nbbox = -1;
     switch(this->nn.type) {

@@ -31,6 +31,6 @@ target_link_libraries(gengi PRIVATE spdlog::spdlog mvnc m jpeg turbojpeg ${OpenC
 # Set the directories that should be included in the build command for this target
 # when running g++ these will be included as -I/directory/path/
 target_include_directories(gengi
-    PRIVATE 
+    PUBLIC 
         ${PROJECT_SOURCE_DIR}/include
 )

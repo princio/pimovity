@@ -40,7 +40,8 @@ class NCS {
         bbox *bboxes;
         NCS(const char*, const char*, NCSNNType);
         ~NCS();
-        int init();
+        int initNN();
+        int initDevice();
         int inference_byte(unsigned char *image, int nbboxes_max);
         int inference(int nbboxes_max);
         int destroy_movidius();
