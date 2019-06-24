@@ -60,17 +60,12 @@ typedef struct SendPacket
 
 class Coordinator {
     private:
-        NCS *ncs;
-        RecvPacket *rpacket;
-        SendPacket  spacket;
-        byte *imraw;
-        int imcols_resized;
-        int imrows_resized;
-        int imsize_resized;
         int imcounter = -1;
         float thresh = 0.5;
         const int OH_SIZE = 12;
-        int buffer_size = 1000*1024;
+
+        int impixel_size = 3;
+        float *ncs_pointer;
 
         /** socket **/
         int timeouts = 10;
@@ -82,6 +77,10 @@ class Coordinator {
         struct sockaddr_in pi_addr;
         struct sockaddr_in uy_addr;
     public:
+        unsigned int rpacket_buffer_size = 500*1024;
+        NCS *ncs;
+        RecvPacket *rpacket;
+        SendPacket  spacket;
         const int STX = 27692;//767590;
         std::string iface;
         unsigned int port;
@@ -97,10 +96,11 @@ class Coordinator {
         int recvImage();
         int recvImages();
         int elaborate();
+        int drawBbox(rgb_pixel *im, Box b, rgb_pixel color);
         int saveImage2Jpeg(byte *im, int index);
         int undistortImage();
-        void drawBbox(byte *im, Box b, byte color[3]);
-        int run(const char *graph, const char *meta, float thresh);
+        int run();
+        int init(const char *graph, const char *meta, float thresh);
 };
 
 #endif //__COORDINATOR_HPP__

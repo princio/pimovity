@@ -45,6 +45,7 @@ class NCS {
         int inference_byte(unsigned char *image, int nbboxes_max);
         int inference(int nbboxes_max);
         int destroy_movidius();
+        int setSizes(int cols_or, int rows_or);
 };
 
 #endif //__NCS_HPP__

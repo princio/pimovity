@@ -169,7 +169,7 @@ int NCS::parse_meta_file() {
     printf("\t%20s:\t%s\n", "name", this->nn.name);
     printf("\t%20s:\t%f\n", "thresh", this->nn.thresh);
     printf("\t%20s:\t[ %d, %d, %d]\n", "input", this->nn.in_w, this->nn.in_h, this->nn.in_c);
-    printf("\t%20s:\t[ %d, %d ]\n", "image", this->nn.im_cols, this->nn.im_rows);
+    printf("\t%20s:\t[ %d, %d ]\n", "image", this->nn.im_or_cols, this->nn.im_or_rows);
     printf("\t%20s:\t[ %d, %d, %d ]\n", "output", this->nn.out_w, this->nn.out_h, this->nn.out_z);
     printf("\t%20s:\t%d\n", "nbbox", this->nn.nbbox);
     printf("\t%20s:\t%d\n", "nbbox_total", this->nn.nbbox_total);
@@ -234,6 +234,7 @@ int NCS::initNN() {
     this->nn.output = (float*) calloc(this->nn.output_size_byte, 1);
 }
 
+
 int NCS::initDevice() {
     retCode = ncDeviceCreate(0, &dev_handle);
     SPDLOG_DEBUG("Creating device...");
@@ -260,23 +261,43 @@ int NCS::initDevice() {
     return 0;
 }
 
+
 NCS::NCS(const char *graph, const char *meta, NCSNNType nntype) {
     this->graph_path = graph;
     this->meta_path = meta;
     this->nn.type = nntype;
 }
 
+
+int NCS::setSizes(int cols_or, int rows_or) {
+	
+	nn.im_or_cols = cols_or;
+	nn.im_or_rows = rows_or;
+
+	nn.im_resized_cols = nn.in_w;
+	nn.im_resized_rows = nn.im_or_rows * ((double) nn.im_resized_cols / nn.im_or_cols);
+
+	nn.im_resized_size = nn.im_resized_cols * nn.im_resized_rows;
+
+    int lb_ofs = ((nn.in_h - nn.im_resized_rows) >> 1) * nn.in_w * 3;
+    nn.input_letterbox = &nn.input[lb_ofs];
+
+    SPDLOG_INFO("Size for NN: or({}, {}), resized({}, {}), letterbox_offset={}.", nn.im_or_cols, nn.im_or_rows, nn.im_resized_cols, nn.im_resized_rows, lb_ofs);
+
+}
+
 int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
     SPDLOG_TRACE("Start.");
 
 	int i = 0;
-    int letterbox = this->nn.in_c * this->nn.in_w * ((this->nn.in_h - this->nn.im_rows) >> 1);
-    int l = this->nn.im_rows * this->nn.im_cols * this->nn.in_c;
-	float *y = &this->nn.input[letterbox];
-	while(i <= l-3) {
-		y[i] = image[i + 2] / 255.; ++i;    // X[i] = imbuffer[i+2] / 255.; ++i;
-		y[i] = image[i] / 255.;     ++i;    // X[i] = imbuffer[i] / 255.;   ++i;
-		y[i] = image[i - 2] / 255.; ++i;    // X[i] = imbuffer[i-2] / 255.; ++i;
+    int l = nn.im_resized_size * 3 - 3;
+	float *y = nn.input_letterbox;
+    int rgb2bgr = 2;
+	while(i <= l) {
+		y[i]     = image[i + 2] / 255.;    // X[i] = imbuffer[i+2] / 255.; ++i;
+		y[i + 1] = image[i + 1] / 255.;    // X[i] = imbuffer[i] / 255.;   ++i;
+		y[i + 2] = image[i] / 255.;        // X[i] = imbuffer[i-2] / 255.; ++i;
+        i += 3;
 	}
 
 #ifdef OPENCV

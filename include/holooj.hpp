@@ -47,8 +47,12 @@ typedef struct nnet {
     int in_w;
     int in_h;
     int in_c;
-    int im_cols;
-    int im_rows;
+    int im_or_cols;
+    int im_or_rows;
+    int im_or_size;
+    int im_resized_cols;
+    int im_resized_rows;
+    int im_resized_size;
     int out_w;
     int out_h;
     int out_z;
@@ -64,6 +68,7 @@ typedef struct nnet {
     float *anchors;
     float *output;
     float *input;
+    float *input_letterbox;
     detection *dets;
     bbox *bboxes;
 } nnet;

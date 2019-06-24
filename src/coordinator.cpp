@@ -33,20 +33,6 @@
 #define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
 #define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
 
-typedef enum PckError {
-        PckGeneric,
-        PckSTX,
-        PckTooSmall
-} PckError;
-
-typedef enum TjError {
-        TjGeneric,
-        TjHeader,
-        TjDecompress,
-        TjCompress,
-        TjDestroy
-} TjError;
-
 
 int decode_jpeg(byte *imj, int imjl, byte *im) {
     tjhandle tjh;
@@ -76,6 +62,7 @@ int decode_jpeg(byte *imj, int imjl, byte *im) {
     return 0;
 }
 
+
 int Coordinator::getAddress(struct in_addr *addr, const char *iface) {
 
 	struct ifaddrs *ifaddr, *ifa;
@@ -93,6 +80,7 @@ int Coordinator::getAddress(struct in_addr *addr, const char *iface) {
 
 	return 0;
 }
+
 
 int Coordinator::startServer() {
 	SPDLOG_TRACE("Start.");
@@ -120,6 +108,7 @@ int Coordinator::startServer() {
 	return 0;
 }
 
+
 int Coordinator::waitPiAndUy() {
 	SPDLOG_TRACE("Start.");
 	int r, id, fd;
@@ -141,15 +130,10 @@ int Coordinator::waitPiAndUy() {
 		if(id == 27) {
 			if(r == 12) {
 				fd_pi = fd;
-				ncs->nn.im_cols = *((int*) &buf[4]);
-				ncs->nn.im_rows = *((int*) &buf[8]);
 
-				imcols_resized = ncs->nn.in_w;
-				imrows_resized = ncs->nn.im_rows * ((double) imcols_resized / ncs->nn.im_cols);
-				imsize_resized = imcols_resized * imrows_resized;
-
+				ncs->setSizes(*((int*) &buf[4]), *((int*) &buf[8]));
+				
 				SPDLOG_INFO("Connected to Pi: {}", caddr);
-				SPDLOG_INFO("Image sizes: {}x{} => raw size {}", ncs->nn.im_cols, ncs->nn.im_rows, ncs->nn.im_cols*ncs->nn.im_rows);
 			} else {
 				SPDLOG_ERROR("Connected to Pi but received {} instead of 12 bytes.", r);
 				return -1;
@@ -175,6 +159,7 @@ int Coordinator::waitPiAndUy() {
 	return 0;
 }
 
+
 int Coordinator::saveImage2Jpeg(byte *im, int index) {
     int ret;
     unsigned long imjl;
@@ -185,7 +170,7 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
     imjl = 200000;
     imj = tjAlloc((int) imjl);
     tjh = tjInitCompress();
-    ret = tjCompress2(tjh, im, ncs->nn.im_cols, 3 * ncs->nn.im_cols, ncs->nn.im_rows, TJPF_BGR, &imj, &imjl, TJSAMP_444, 100, 0);
+    ret = tjCompress2(tjh, im, ncs->nn.im_or_cols, 3 * ncs->nn.im_or_cols, ncs->nn.im_or_rows, TJPF_BGR, &imj, &imjl, TJSAMP_444, 100, 0);
     REPORTSPD(ret, "image2jpeg: Tj compress error: «{}»", tjGetErrorStr());
     REPORTSPD(tjDestroy(tjh), "image2jpeg: Tj destroy Error: «{}»)", tjGetErrorStr());
     char filename[30];
@@ -202,181 +187,204 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
     return 0;
 }
 
-void Coordinator::drawBbox(byte *im, Box b, byte color[3]) {
-    int w = ncs->nn.im_cols;
-    int h = ncs->nn.im_rows;
+
+int Coordinator::drawBbox(rgb_pixel *im, Box b, rgb_pixel color) {
+	int w, h, wh, left_col, right_col, top_row, bot_row,
+		left_overlap, top_overlap, right_overlap, bottom_overlap, thickness, 
+		corner_top_left, corner_bot_left, corner_top_right, corner_bot_right,
+		top_left_pixel, bot_left_pixel, box_width_pixel;
+
+    w = ncs->nn.im_or_cols;
+    h = ncs->nn.im_or_rows;
+	wh = w*h;
+
+    left_col  = (b.x-b.w/2.)*w;
+    right_col = (b.x+b.w/2.)*w;
+    top_row   = (b.y-b.h/2.)*h;
+    bot_row   = (b.y+b.h/2.)*h;
+
+	left_overlap = 0;
+	top_overlap = 0;
+	right_overlap = 0;
+	bottom_overlap = 0;
+    thickness = 5; //border width in pixel minus 1
+    if(left_col < 0) left_col = 0;
+    else if(left_col > w-thickness) left_col = w-thickness;
+    if(right_col > w-thickness) right_col = w-thickness;
+    if(top_row < 0) top_row = 0;
+    if(top_row >= h-thickness) top_row = h-thickness;
+    if(bot_row >= h-thickness) bot_row = h-thickness;
+
+	left_overlap   = -1 * (left_col  - thickness);
+	top_overlap    = -1 * (top_row   - thickness);
+	right_overlap  = -1 * (w - right_col - thickness);
+	bottom_overlap = -1 * (h - bot_row   - thickness);
+
+	left_overlap   = left_overlap < 0   ? 0 : left_overlap;
+	top_overlap    = top_overlap < 0    ? 0 : top_overlap;
+	right_overlap  = right_overlap < 0  ? 0 : right_overlap;
+	bottom_overlap = bottom_overlap < 0 ? 0 : bottom_overlap;
+	
 
 
-    int left  = (b.x-b.w/2.)*w;
-    int right = (b.x+b.w/2.)*w;
-    int top   = (b.y-b.h/2.)*h;
-    int bot   = (b.y+b.h/2.)*h;
+	corner_top_left  = w * top_row + left_col;
+	corner_bot_left  = w * bot_row + left_col;
+	corner_top_right = w * top_row + right_col + thickness;
+	corner_bot_right = w * bot_row + right_col + thickness;
+	if(corner_top_left < 0 || corner_top_left > wh) {
+		SPDLOG_WARN("Wrong TOP LEFT corner of horizontal borders: {} not in [0, {}].", corner_top_left, wh);
+	}
+	if(corner_bot_left < 0 || corner_bot_left > wh) {
+		SPDLOG_WARN("Wrong BOTTOM LEFT corner of horizontal borders: {} not in [0, {}].", corner_bot_left, wh);
+	}
+	if(corner_top_right < 0 || corner_top_right > wh) {
+		SPDLOG_WARN("Wrong TOP RIGHT corner of horizontal borders: {} not in [0, {}].", corner_top_right, wh);
+	}
+	if(corner_bot_right < 0 || corner_bot_right > wh) {
+		SPDLOG_WARN("Wrong BOTTOM RIGHT corner of horizontal borders: {} not in [0, {}].", corner_bot_right, wh);
+	}
 
 
-    int thickness = 2; //border width in pixel minus 1
-    if(left < 0) left = thickness;
-    if(right > w-thickness) right = w-thickness;
-    if(top < 0) top = thickness;
-    if(bot >= h-thickness) bot = h-thickness;
 
-    int top_row = 3*top*w;
-    int bot_row = 3*bot*w;
-    int left_col = 3*left;
-    int right_col = 3*right;
-    for(int k = left_col; k < right_col; k+=3) {
-        for(int wh = 0; wh <= thickness; wh++) {
-            int border_line = wh*w*3;
-
-			int a = k + top_row + border_line;
-			int b = k + bot_row + border_line;
-
-            memcpy(&im[k + top_row - border_line], color, 3);
-            memcpy(&im[k + bot_row + border_line], color, 3); 
-
-			if(a < 0 || a > w * h * 3) {
-				printf("a: %d", a);
+	top_left_pixel = w * top_row + left_col;
+	bot_left_pixel = w * (bot_row + thickness) + left_col;
+	box_width_pixel = right_col - left_col + thickness - left_overlap - right_overlap;
+	for(int r = 0; r < thickness; r++) {
+		for(int p = 0; p < box_width_pixel; p++) {
+			if(r >= top_overlap || p/thickness % 2 == 0) {
+				im[top_left_pixel + p] = color;
+				if(top_left_pixel + p < 0 || top_left_pixel + p > wh) SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}.", top_left_pixel + p, wh);
 			}
-			if(b < 0 || b > w * h * 3) {
-				printf("b: %d", b);
+			if(r >= bottom_overlap || p/thickness % 2 == 0) {
+				im[bot_left_pixel + p] = color;
+				if(bot_left_pixel + p < 0 || bot_left_pixel + p > wh) SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", bot_left_pixel + p, wh);
 			}
-        }
-    }
-	int pixel_left = top*3*w + left_col;
-	int pixel_right = top*3*w + right_col;
-    for(int k = top; k < bot; k++) {
-        for(int wh = 0; wh <= thickness*3; wh+=3) {
-			int c = pixel_left  - wh;
-			int d = pixel_right + wh;
-            memcpy(&im[pixel_left  - wh], color, 3);
-            memcpy(&im[pixel_right + wh], color, 3);
-			if(c < 0 || c > w * h * 3) {
-				printf("c: %d", c);
+		}
+		top_left_pixel += w;
+		bot_left_pixel += w;
+	}
+
+
+
+	top_row += thickness;
+	bot_row += 5;
+	corner_top_left  = w * top_row + left_col;
+	corner_bot_left  = w * bot_row + left_col;
+	corner_top_right = w * top_row + left_col + thickness;
+	corner_bot_right = w * bot_row + left_col + thickness;
+	if(corner_top_left < 0 || corner_top_left > wh) {
+		SPDLOG_WARN("Wrong TOP LEFT corner of vertical borders: {} not in [0, {}].", corner_top_left, wh);
+	}
+	if(corner_bot_left < 0 || corner_bot_left > wh) {
+		SPDLOG_WARN("Wrong BOTTOM LEFT corner of vertical borders: {} not in [0, {}].", corner_bot_left, wh);
+	}
+	if(corner_top_right < 0 || corner_top_right > wh) {
+		SPDLOG_WARN("Wrong TOP RIGHT corner of vertical borders: {} not in [0, {}].", corner_top_right, wh);
+	}
+	if(corner_bot_right < 0 || corner_bot_right > wh) {
+		SPDLOG_WARN("Wrong BOTTOM RIGHT corner of vertical borders: {} not in [0, {}].", corner_bot_right, wh);
+	}
+    for(int r = top_row; r <= bot_row; r++) {
+		for(int b = 0; b < thickness; b++) {
+			if(b < thickness - left_overlap || (r - top_row)/thickness % 2 == 0) {
+				im[r*w + left_col + b] = color;
+				if(r*w + left_col + b < 0  || r*w + left_col + b > wh)  SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", r*w + left_col + b, wh);
 			}
-			if(d < 0 || d > w * h * 3) {
-				printf("d: %d", d);
+			if(b >= right_overlap || (r - top_row)/thickness % 2 == 0) {
+				im[r*w + right_col + b] = color;
+				if(r*w + right_col + b < 0 || r*w + right_col + b > wh) SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", r*w + right_col + b, wh);
 			}
-        }
-		pixel_left += 3*w;
-		pixel_right += 3*w;
+		}
     }
 }
+
 
 int Coordinator::undistortImage() {
 	return 0;
 }
 
+
 int Coordinator::elaborate() {
 	SPDLOG_DEBUG("Start elaborating {} bytes.", rpacket->l);
 	int nbbox;
+	cv::Mat mat_raw;
 	cv::Mat mat_raw_resized;
-	float *pointer = (ncs->nn.input + ((ncs->nn.in_h - imrows_resized) >> 1));
+
+	printf("##%p\n", (void*) rpacket->image);
+
 	if(!isBMP) {
-
-		if(0) {
-			if(0 > decode_jpeg(rpacket->image, rpacket->l, imraw)) return -1;
-			SPDLOG_DEBUG("Jpeg image decoded.");
-		} else {
-			cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
-			auto mat_raw = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
-			cv::resize(mat_raw, mat_raw_resized, cv::Size(imcols_resized, imrows_resized));
-			std::cout << mat_raw_resized.type() << std::endl;
-			mat_raw_resized.convertTo(mat_raw_resized, CV_32FC3);
-			std::cout << mat_raw_resized.type() << std::endl;
-		}
+		cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
+		mat_raw = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
+		cv::resize(mat_raw, mat_raw_resized, cv::Size(ncs->nn.im_resized_cols, ncs->nn.im_resized_rows));
+		// mat_raw_resized.convertTo(mat_raw_resized, CV_8UC3);
+		// mat_raw_resized.cv
 	}
-	REPORTSPD(mat_raw_resized.total() != imsize_resized, "Resizing sizes not matching yolov2 input: {} instead of {}.", mat_raw_resized.total(), imsize_resized);
+	REPORTSPD(mat_raw_resized.total() != ncs->nn.im_resized_size, "Resizing sizes not matching yolov2 input: {} instead of {}.", mat_raw_resized.total(), ncs->nn.im_resized_size);
 
-	memcpy(pointer, mat_raw_resized.data, imsize_resized*4);
-	nbbox = ncs->inference(3);
+	//memcpy(ncs_pointer, mat_raw_resized.data, imsize_resized*4);
+	cv::imshow("nn_input", mat_raw_resized);
+	cv::waitKey(0);
+	nbbox = ncs->inference_byte(mat_raw_resized.data, 5);
+	SPDLOG_INFO("Found {} bboxes.", nbbox);
 
-    byte color[3] = {250, 0, 0};
+
 	for(int i = nbbox-1; i >= 0; --i) {
+    	rgb_pixel color;
+		byte c1 = 250 * i / 3;
+		byte c2 = 250 * i / 3;
+		byte c3 = 250 * i / 3;
 		SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
 			ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
 
-		//drawBbox(imraw, ncs->nn.bboxes[i].box, color);
+		drawBbox((rgb_pixel*) mat_raw.data, ncs->nn.bboxes[i].box, color);
 	}
+	cv::Mat mat_nn_input (416, 416, CV_32FC3, ncs->nn.input);
+	cv::imshow("nn_input", mat_nn_input);
+	cv::waitKey(0);
 
 	if(nbbox >= 0) {
-#ifdef OPENCV
-		IplImage *iplim = cvCreateImage(cvSize(config.cols, config.rows), IPL_DEPTH_8U, 3);
-  		memcpy(iplim->imageData, im, config.cols*config.rows*3);
-		cvShowImage("bibo", iplim);
-		cvUpdateWindow("bibo");
-		// cvWaitKey(10);
-	    cvReleaseImage(&iplim);
-#endif
-		// show_image_cv(im, "bibo2", config.rows, config.cols, 0);
-        saveImage2Jpeg(imraw, ++imcounter);
+		std::stringstream fname;
+		SPDLOG_WARN("Showing image.");
+		fname << "/home/developer/Desktop/pr2/phs/im_" << ++imcounter << ".jpg";
+		cv::imwrite(fname.str(), mat_raw);
+		try {
+			cv::imwrite(fname.str(), mat_raw);
+		}
+		catch (std::runtime_error& ex) {
+			fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
+			return 1;
+		}
+		cv::imshow("original", mat_raw);
+		cv::waitKey(0);
 	}
 
 	SPDLOG_DEBUG("Finished elaborating: found {} nbboxes.", nbbox);
 	return nbbox;
-}	
+}
 
-
-// int recv_config() {
-// 	int ret;
-
-// 	ret = spu->recv((byte *) &config, sizeof(Config), 0);//REMEMBER ALIGNMENT! char[6] equal to char[8] because of it.
-	
-// 	REPORT_ERRNO(ret < 0, -1, "");
-// 	REPORT(ret == 0, -1, "No config received");
-
-// 	ncs->nn.im_cols = config.cols;
-// 	ncs->nn.im_rows = config.rows;
-
-// 	buffer_size = (OH_SIZE + config.rows * config.cols * 3) >> (config.isBMP ? 0 : 4);
-// 	image_size = config.rows * config.cols * 3;
-
-
-// 	int l_tot_byte = 0;
-// 	for(int i = 0; i < ncs->nn.nclasses; i++) {
-// 		l_tot_byte += strlen(ncs->nn.classes[i]) + 1;
-// 	}
-
-// 	char cls[12 + l_tot_byte];
-// 	int cls_p = 12;
-// 	for(int i = 0; i < ncs->nn.nclasses; i++) {
-// 		int sl = strlen(ncs->nn.classes[i]);
-// 		memcpy(cls + cls_p, ncs->nn.classes[i], sl);
-// 		cls[cls_p + sl] = '\0';
-// 		cls_p += sl + 1;
-// 	}
-
-//     memcpy(cls,		&config.STX, 	4);
-//     memcpy(cls + 4,	&l_tot_byte, 			4);
-//     memcpy(cls + 8,	&ncs->nn.nclasses, 			4);
-
-//     ret = spu->send((byte *) cls, 12, 0);
-// 	REPORT_ERRNO(ret < 0, -1, "");
-
-//     ret = spu->send((byte *) cls + 12, l_tot_byte, 0);
-// 	REPORT_ERRNO(ret < 0, -1, "");
-
-// 	return ret;
-// }
 
 int Coordinator::recvImage() {
 	int rl = recv(fd_pi, (byte*) rpacket, 8, 0);
 	REPORTSPD(rpacket->stx != STX, "Wrong STX ({} instead of {}).", rpacket->stx, STX);
+
+	if(rpacket_buffer_size < rpacket->l) {
+		printf("Image too large: %ud > %d. Skipped.", rpacket_buffer_size, rpacket->l);
+		return -2;
+	}
+
 	rl = recv(fd_pi, (byte*) rpacket->image, rpacket->l, MSG_WAITALL);
 	REPORTSPD(rpacket->stx != STX, "Too few bytes received ({} instead of {}).", rl, rpacket->l);
+
 	return 0;
 }
 
+
 int Coordinator::recvImages() {
 	int consecutive_wrong_packets = 0, r;
-	rpacket = (RecvPacket *) calloc(buffer_size, 1);
+	rpacket = (RecvPacket *) calloc(sizeof(RecvPacket) + rpacket_buffer_size, 1);
 	memset(&spacket, 0, sizeof(SendPacket));
 	spacket.stx = STX;
 	ncs->nn.bboxes = spacket.bboxes;
-	if(!isBMP) {
-		imraw = (byte*) calloc(ncs->nn.im_rows*ncs->nn.im_cols*3, 1);
-	}
-    else {
-        imraw = rpacket->image;
-    }
 
 	SEND(r, fd_pi, (void*) &STX, 4, 0);
 	REPORTSPD(r != 4, "Sent wrong bytes number to Pi ({} instead of 4)", r);
@@ -387,7 +395,10 @@ int Coordinator::recvImages() {
 	while(1) {
 		int nbbox, sl;
 
-		if(recvImage()) {
+		if(sl = recvImage()) {
+			if(sl == -2) {
+				continue;
+			} else
 			if(++consecutive_wrong_packets == 10) {
 				SPDLOG_WARN("Wrong incoming packets from Pi for 10 consecutive times. Stop loop.");
 				break;
@@ -399,7 +410,6 @@ int Coordinator::recvImages() {
 		consecutive_wrong_packets = 0;
 
 		sl = send(fd_uy, rpacket, rpacket->l + 8, 0);
-		// REPORTSPD(sl < rl, "({} > {}).", rpacket->l + OH_SIZE, rl);
 
 		nbbox = elaborate();
 
@@ -421,13 +431,18 @@ int Coordinator::recvImages() {
 }
 
 
-int Coordinator::run(const char *graph, const char *meta, float thresh) {
-	int ret;
+int Coordinator::init(const char *graph, const char *meta, float thresh) {
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
 	ncs->initNN();
-
-
 	ncs->nn.thresh = thresh;
+
+	cv::namedWindow("original", cv::WINDOW_AUTOSIZE );// Create a window for display.
+	cv::namedWindow("nn_input", cv::WINDOW_AUTOSIZE );// Create a window for display.
+}
+
+
+int Coordinator::run() {
+	int ret;
 
 	ret = INT32_MAX;
 	while(1) {
@@ -450,6 +465,8 @@ int Coordinator::run(const char *graph, const char *meta, float thresh) {
 			SPDLOG_INFO("Sockets closed.");
 
 	}
+
+	cv::destroyAllWindows();
 
 	ncs->~NCS();
 
