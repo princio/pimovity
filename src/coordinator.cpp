@@ -253,11 +253,17 @@ int Coordinator::drawBbox(rgb_pixel *im, Box b, rgb_pixel color) {
 		for(int p = 0; p < box_width_pixel; p++) {
 			if(r >= top_overlap || p/thickness % 2 == 0) {
 				im[top_left_pixel + p] = color;
-				if(top_left_pixel + p < 0 || top_left_pixel + p > wh) SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}.", top_left_pixel + p, wh);
+				if(top_left_pixel + p < 0 || top_left_pixel + p > wh) {
+					SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}.", top_left_pixel + p, wh);
+					return -1;
+				}
 			}
 			if(r >= bottom_overlap || p/thickness % 2 == 0) {
 				im[bot_left_pixel + p] = color;
-				if(bot_left_pixel + p < 0 || bot_left_pixel + p > wh) SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", bot_left_pixel + p, wh);
+				if(bot_left_pixel + p < 0 || bot_left_pixel + p > wh) {
+					SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", bot_left_pixel + p, wh);
+					return -1;
+				}
 			}
 		}
 		top_left_pixel += w;
@@ -288,11 +294,17 @@ int Coordinator::drawBbox(rgb_pixel *im, Box b, rgb_pixel color) {
 		for(int b = 0; b < thickness; b++) {
 			if(b < thickness - left_overlap || (r - top_row)/thickness % 2 == 0) {
 				im[r*w + left_col + b] = color;
-				if(r*w + left_col + b < 0  || r*w + left_col + b > wh)  SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", r*w + left_col + b, wh);
+				if(r*w + left_col + b < 0  || r*w + left_col + b > wh) {
+					SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", r*w + left_col + b, wh);
+					return -1;
+				}
 			}
 			if(b >= right_overlap || (r - top_row)/thickness % 2 == 0) {
 				im[r*w + right_col + b] = color;
-				if(r*w + right_col + b < 0 || r*w + right_col + b > wh) SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", r*w + right_col + b, wh);
+				if(r*w + right_col + b < 0 || r*w + right_col + b > wh) {
+					SPDLOG_WARN("Overflow: {0} < 0 || {0} > {1}", r*w + right_col + b, wh);
+					return -1;
+				}
 			}
 		}
     }
@@ -322,8 +334,8 @@ int Coordinator::elaborate() {
 	REPORTSPD(mat_raw_resized.total() != ncs->nn.im_resized_size, "Resizing sizes not matching yolov2 input: {} instead of {}.", mat_raw_resized.total(), ncs->nn.im_resized_size);
 
 	//memcpy(ncs_pointer, mat_raw_resized.data, imsize_resized*4);
-	cv::imshow("nn_input", mat_raw_resized);
-	cv::waitKey(0);
+	// cv::imshow("nn_input", mat_raw_resized);
+	// cv::waitKey(0);
 	nbbox = ncs->inference_byte(mat_raw_resized.data, 5);
 	SPDLOG_INFO("Found {} bboxes.", nbbox);
 
@@ -338,9 +350,9 @@ int Coordinator::elaborate() {
 
 		drawBbox((rgb_pixel*) mat_raw.data, ncs->nn.bboxes[i].box, color);
 	}
-	cv::Mat mat_nn_input (416, 416, CV_32FC3, ncs->nn.input);
-	cv::imshow("nn_input", mat_nn_input);
-	cv::waitKey(0);
+	// cv::Mat mat_nn_input (416, 416, CV_32FC3, ncs->nn.input);
+	// cv::imshow("nn_input", mat_nn_input);
+	// cv::waitKey(0);
 
 	if(nbbox >= 0) {
 		std::stringstream fname;
@@ -354,8 +366,8 @@ int Coordinator::elaborate() {
 			fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
 			return 1;
 		}
-		cv::imshow("original", mat_raw);
-		cv::waitKey(0);
+		// cv::imshow("original", mat_raw);
+		// cv::waitKey(0);
 	}
 
 	SPDLOG_DEBUG("Finished elaborating: found {} nbboxes.", nbbox);
@@ -424,7 +436,7 @@ int Coordinator::recvImages() {
 		} else {
 			return -1;
 		}
-		usleep(1000000);
+		// usleep(1000000);
 	}
 	free(rpacket);
 	return -1;

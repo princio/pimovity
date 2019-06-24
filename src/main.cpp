@@ -98,7 +98,7 @@ int main (int argc, char** argv) {
 		printf("HoloOj for Raspberry.\n\t--graph\t\t\tthe path to the graph file.\n\t--meta\t\t\tthe path to the meta file.\n\t--iface\t\t\tthe network interface to use.\n\t--help, -h\t\tthis help.\n");
 		exit(0);
 	}
-	auto log_level = spdlog::level::debug;
+	auto log_level = spdlog::level::trace;
 	if(argc >= 3) {
 		for(int i = 1; i < argc; i++) {
 			if(!strcmp(argv[i], "--iface")) {
@@ -136,6 +136,13 @@ int main (int argc, char** argv) {
 
 	unsigned int nb;
 	Coordinator coo(iface.c_str(), port);
+
+    coo.init(graph, meta, thresh);
+
+    coo.run();
+
+	exit(0);
+
 	char *buf;
 
     coo.init(graph, meta, thresh);
@@ -155,6 +162,6 @@ int main (int argc, char** argv) {
 	coo.ncs->nn.bboxes = (bbox*) calloc(5, sizeof(bbox));
 	coo.elaborate();
 
-    // coo.run();
+    coo.run();
 
 }
