@@ -13,6 +13,8 @@
 #include <sys/types.h>
 #include <ifaddrs.h>
 
+#include <opencv2/opencv.hpp>
+
 
 // typedef enum {
 // 	GenericFile
@@ -60,10 +62,20 @@ typedef struct SendPacket
 
 class Coordinator {
     private:
+        unsigned int port = 8001;
         int imcounter = -1;
         float thresh = 0.5;
         const int OH_SIZE = 12;
-
+        std::vector<uchar> jpeg_buffer;
+        cv::Mat mat_raw;
+        cv::Mat mat_raw_calibrated;
+        cv::Mat mat_raw_cropped;
+        cv::Mat mat_raw_resized;
+        cv::Mat cameraMatrix;
+        cv::Mat distCoeffs;
+        cv::Mat map1;
+        cv::Mat map2;
+        cv::Rect roi;
         int impixel_size = 3;
         float *ncs_pointer;
 
@@ -83,23 +95,26 @@ class Coordinator {
         SendPacket  spacket;
         const int STX = 27692;//767590;
         std::string iface;
-        unsigned int port;
         bool isBMP = false;
         Coordinator(const char *iface, int port) : iface(iface), port(port) {};
         int recv(int fd, void* buf, size_t len, int flags);
         int send(int fd, void* buf, size_t len, int flags);
         int getAddress(struct in_addr *addr, const char *iface);
         int startServer();
+        int connectToPi();
+        int waitUnity();
         int waitPiAndUy();
+        int initCalibration(int w, int h);
         int closeSockets();
         int recvConfig();
         int recvImage();
         int recvImages();
         int elaborate();
+        int elaborateImage();
         int drawBbox(rgb_pixel *im, Box b, rgb_pixel color);
         int saveImage2Jpeg(byte *im, int index);
         int undistortImage();
-        int run();
+        int run(unsigned int);
         int init(const char *graph, const char *meta, float thresh);
 };
 

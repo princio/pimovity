@@ -29,6 +29,8 @@ sys/types.h
 -
 ifaddrs.h
 -
+opencv2/opencv.hpp
+-
 
 ../include/holooj.hpp
 sstream

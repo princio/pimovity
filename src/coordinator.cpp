@@ -88,7 +88,11 @@ int Coordinator::startServer() {
 	char caddr[20];
 
 	fd_server = socket(AF_INET, SOCK_STREAM, 0);
-	REPORTSPD_ERRNO(0 > this->fd_server);
+	REPORTSPD_ERRNO(0 > fd_server);
+	
+	ret = 1;
+	ret = setsockopt(fd_server, SOL_SOCKET, SO_REUSEADDR, &ret, 4);
+	REPORTSPD_ERRNO(0 > ret);
 
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 	server_addr.sin_family = AF_INET;
@@ -98,13 +102,66 @@ int Coordinator::startServer() {
 	inet_ntop(AF_INET, &(server_addr.sin_addr), caddr, INET_ADDRSTRLEN);
 	SPDLOG_INFO("Socket Server started at: {}:{}", caddr, port);
 
-	ret = bind(this->fd_server, (struct sockaddr *) &server_addr, sizeof(server_addr));
+	ret = bind(fd_server, (struct sockaddr *) &server_addr, sizeof(server_addr));
 	REPORTSPD_ERRNO(0 > ret);
 
-	ret = listen(this->fd_server, 3);
+	ret = listen(fd_server, 1);
 	REPORTSPD_ERRNO(0 > ret);
 
 	SPDLOG_TRACE("End.");
+	return 0;
+}
+
+
+int Coordinator::connectToPi() {
+	int ret, fd;
+    int addrlen = sizeof(pi_addr);
+	char caddr[20];
+	byte buf[12];
+	struct sockaddr_in pi_addr;
+	
+    pi_addr.sin_family = AF_INET;
+    pi_addr.sin_port = htons(port);
+
+    ret = inet_pton(AF_INET, "192.168.1.176", &pi_addr.sin_addr);
+	REPORTSPD_ERRNO(0 > ret);
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	REPORTSPD_ERRNO(0 > fd);
+
+    ret = connect(fd, (struct sockaddr *) &pi_addr, sizeof(pi_addr));
+	REPORTSPD_ERRNO(0 > ret);
+
+	ret = 27;
+	ret = send(fd, &ret, 4, 0);
+	REPORTSPD(ret < 4, "Too few bytes ({}).", ret);
+
+	ret = recv(fd, &buf, 12, 0);
+	REPORTSPD(ret < 12, "Too few bytes ({}).", ret);
+
+	ncs->setSizes(*((int*) &buf[4]), *((int*) &buf[8]));
+
+	fd_pi = fd;
+
+	return 0;
+}
+
+int Coordinator::waitUnity() {
+	SPDLOG_TRACE("Start.");
+	int r, id, fd;
+	struct sockaddr_in addr;
+    int addrlen = sizeof(addr);
+	char caddr[20];
+
+	fd = socket(AF_INET, SOCK_STREAM, 0);
+	REPORTSPD_ERRNO(0 > fd);
+
+	fd = accept(fd_server, (struct sockaddr *)&addr, (socklen_t*)&addrlen);
+	inet_ntop(AF_INET, &(addr.sin_addr), caddr, INET_ADDRSTRLEN);
+	REPORTSPD_ERRNO(0 > fd);
+
+	fd_uy = fd;
+
 	return 0;
 }
 
@@ -119,7 +176,7 @@ int Coordinator::waitPiAndUy() {
 	timeouts = 0;
 	
 	for(int i = 0; i < 2; i++) {
-		fd = accept(this->fd_server, (struct sockaddr *)&addr, (socklen_t*)&addrlen);
+		fd = accept(fd_server, (struct sockaddr *)&addr, (socklen_t*)&addrlen);
 		inet_ntop(AF_INET, &(addr.sin_addr), caddr, INET_ADDRSTRLEN);
 		REPORTSPD_ERRNO(0 > fd);
 
@@ -131,7 +188,9 @@ int Coordinator::waitPiAndUy() {
 			if(r == 12) {
 				fd_pi = fd;
 
-				ncs->setSizes(*((int*) &buf[4]), *((int*) &buf[8]));
+				initCalibration(*((int*) &buf[4]), *((int*) &buf[8]));
+	
+				ncs->setSizes(roi.width, roi.height);
 				
 				SPDLOG_INFO("Connected to Pi: {}", caddr);
 			} else {
@@ -146,19 +205,58 @@ int Coordinator::waitPiAndUy() {
 		}
 	}
 
+
 	REPORTSPD(fd_uy == -1, "Unity device not connected.");
 	REPORTSPD(fd_pi == -1, "Pi device not connected.");
 
-	ufds[0].fd = this->fd_pi;
+
+	memcpy(buf, &STX, 4);
+	memcpy(buf + 4, &roi.width, 4);
+	memcpy(buf + 8, &roi.height, 4);
+	r = send(fd_uy, buf, 12, 0);
+	if(0 > r) return -1;
+
+	ufds[0].fd = fd_pi;
 	ufds[0].events = POLLIN | POLLOUT; // check for normal or out-of-band
 
-	ufds[1].fd = this->fd_uy;
+	ufds[1].fd = fd_uy;
 	ufds[1].events = POLLIN | POLLOUT; // check for normal or out-of-band
 
 	SPDLOG_TRACE("End.");
 	return 0;
 }
 
+
+int Coordinator::initCalibration(int w, int h) {
+	SPDLOG_TRACE("Start.");
+	std::string filename;
+	if(w == 1640 && h == 1232)  filename = "../data/xml/calib_2k.xml";
+	else
+	if(w == 3280 && h == 2464)  filename = "../data/xml/calib_4k.xml";
+	else
+	if(w == 1920 && h == 1080)  filename = "../data/xml/calib_1080.xml";
+	else return -1;
+
+	cv::Size size (w, h);
+
+
+	jpeg_buffer.reserve(rpacket_buffer_size);
+
+	cv::FileStorage fs = cv::FileStorage(filename, cv::FileStorage::READ);
+	fs["camera_matrix"] >> cameraMatrix;
+	fs["distortion_coefficients"] >> distCoeffs;
+
+	
+	cv::initUndistortRectifyMap(
+		cameraMatrix, distCoeffs, cv::Mat(),
+		cv::getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, size, 1, size, &roi), size,
+		CV_32FC1, map1, map2);
+
+
+	printf("\n- ROI: (%d, %d, %d, %d)\n", roi.x, roi.y, roi.width, roi.height);
+
+	SPDLOG_TRACE("Stop.");
+}
 
 int Coordinator::saveImage2Jpeg(byte *im, int index) {
     int ret;
@@ -375,8 +473,26 @@ int Coordinator::elaborate() {
 }
 
 
+int Coordinator::elaborateImage() {
+	SPDLOG_DEBUG("Start image elaboration ({} bytes).", rpacket->l);
+
+	cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
+	mat_raw = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
+    cv::remap(mat_raw, mat_raw_calibrated, map1, map2, cv::INTER_LINEAR);
+	mat_raw_cropped = mat_raw_calibrated(roi);
+	cv::imencode(".jpg", mat_raw_cropped, jpeg_buffer);
+	cv::imwrite("../phs/im.jpg", mat_raw_cropped);
+
+	/** only with NCS */
+	cv::resize(mat_raw_cropped, mat_raw_resized, cv::Size(ncs->nn.im_resized_cols, ncs->nn.im_resized_rows));
+
+	SPDLOG_TRACE("Stop.");
+	return 0;
+}
+
+
 int Coordinator::recvImage() {
-	int rl = recv(fd_pi, (byte*) rpacket, 8, 0);
+	int rl = recv(fd_pi, (byte*) rpacket, 8, MSG_WAITALL);
 	REPORTSPD(rpacket->stx != STX, "Wrong STX ({} instead of {}).", rpacket->stx, STX);
 
 	if(rpacket_buffer_size < rpacket->l) {
@@ -392,20 +508,32 @@ int Coordinator::recvImage() {
 
 
 int Coordinator::recvImages() {
+	SPDLOG_TRACE("Start.");
 	int consecutive_wrong_packets = 0, r;
+	int stxs[2] = { STX, STX };
 	rpacket = (RecvPacket *) calloc(sizeof(RecvPacket) + rpacket_buffer_size, 1);
 	memset(&spacket, 0, sizeof(SendPacket));
 	spacket.stx = STX;
 	ncs->nn.bboxes = spacket.bboxes;
 
-	SEND(r, fd_pi, (void*) &STX, 4, 0);
-	REPORTSPD(r != 4, "Sent wrong bytes number to Pi ({} instead of 4)", r);
-	SEND(r, fd_uy, (void*) &STX, 4, 0);
-	REPORTSPD(r != 4, "Sent wrong bytes number to Unity ({} instead of 4)", r);
-	SPDLOG_INFO("Sent STX to Pi and Unity to start exchage.");
+	if (0 > send(fd_pi, stxs, 8, 0)) return -1;
 
+	// while(true) {
+	// 	SPDLOG_INFO("Waiting signal for start receiving images.");
+	// 	r = recv(fd_pi, &stxs, 8, MSG_WAITALL);
+	// 	if(r != 8) {
+	// 		usleep(50000);
+	// 	} else {
+	// 		REPORTSPD(stxs[0] != STX || stxs[1] != STX, "Wrong STXs: {} != {} or {} != {}", stxs[0], STX, stxs[1], STX);
+	// 		break;
+	// 	}
+	// }
+
+	SPDLOG_INFO("Begin image elaboration...");
 	while(1) {
 		int nbbox, sl;
+		
+		sl = send(fd_pi, stxs, 8, 0);
 
 		if(sl = recvImage()) {
 			if(sl == -2) {
@@ -421,25 +549,33 @@ int Coordinator::recvImages() {
 		}
 		consecutive_wrong_packets = 0;
 
-		sl = send(fd_uy, rpacket, rpacket->l + 8, 0);
+		//sl = send(fd_uy, rpacket, rpacket->l + 8, 0);
 
-		nbbox = elaborate();
+		if(0 > elaborateImage()) return -1;
 
-		if(nbbox > 0) {
-			int size = 12 + nbbox * sizeof(bbox);
-			SEND(sl, fd_uy, &spacket, size, 0);
-			SPDLOG_INFO("Sent {} bboxes ({} bytes) to Unity.", nbbox, sl);
-			continue;
-		} else
-		if(nbbox == 0) {
-			SPDLOG_INFO("No bbox found.", nbbox, sl);
-		} else {
-			return -1;
-		}
+		SPDLOG_INFO("Jpeg vector size: {}.", jpeg_buffer.size());
+
+		rpacket->l = jpeg_buffer.size();
+		sl = send(fd_uy, rpacket, 8, 0);
+		sl = send(fd_uy, jpeg_buffer.data(), jpeg_buffer.size(), 0);
+
+		// if(nbbox > 0) {
+		// 	int size = 12 + nbbox * sizeof(bbox);
+		// 	//SEND(sl, fd_uy, &spacket, size, 0);
+		// 	SPDLOG_INFO("Sent {} bboxes ({} bytes) to Unity.", nbbox, sl);
+		// 	continue;
+		// } else
+		// if(nbbox == 0) {
+		// 	SPDLOG_INFO("No bbox found.", nbbox, sl);
+		// } else {
+		// 	return -1;
+		// }
 		// usleep(1000000);
 	}
 	free(rpacket);
-	return -1;
+
+	SPDLOG_TRACE("END.");
+	return 0;
 }
 
 
@@ -450,33 +586,44 @@ int Coordinator::init(const char *graph, const char *meta, float thresh) {
 
 	cv::namedWindow("original", cv::WINDOW_AUTOSIZE );// Create a window for display.
 	cv::namedWindow("nn_input", cv::WINDOW_AUTOSIZE );// Create a window for display.
+
 }
 
 
-int Coordinator::run() {
+int Coordinator::run(unsigned int port) {
 	int ret;
 
+	this->port = port;
+
 	ret = INT32_MAX;
-	while(1) {
-		if(startServer()) exit(1);
-
-		SPDLOG_INFO("Socket is waiting new incoming tcp connection at port {}...", port);
-		ret = waitPiAndUy();
-        if(ret < 0) continue;
 
 
-		if(ncs->initDevice()) exit(1);
 
-		ret = recvImages();
-        if(ret >= 0) {
-			break;
-		}
+	
+	// SPDLOG_INFO("Connecting to Pi...");
+	// while(true) {
+	// 	ret = connectToPi();
+	// 	if(ret < 0) usleep(3000*1000);
+	// 	else break;
+	// }
 
-		REPORTSPD(closeSockets() < 0, "Closing sockets error.")
-		else
-			SPDLOG_INFO("Sockets closed.");
+	SPDLOG_INFO("Starting server...");
+	if(startServer()) return -1;
+	SPDLOG_INFO("Waiting for Pi and Unity...");
+	ret = waitPiAndUy();
+	if(ret < 0) return -1;
 
+	//if(ncs->initDevice()) exit(1);
+
+	ret = recvImages();
+	if(ret < 0) {
+		return -1;
 	}
+
+	REPORTSPD(closeSockets() < 0, "Closing sockets error.")
+	else
+		SPDLOG_INFO("Sockets closed.");
+
 
 	cv::destroyAllWindows();
 

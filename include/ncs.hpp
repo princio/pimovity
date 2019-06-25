@@ -27,7 +27,7 @@ class NCS {
         NY2 *ny2;
         std::string graph_path;
         std::string meta_path;
-        int parse_meta_file();
+        int parse_meta_file(bool print);
         int load_nn();
         Box get_region_box(float *x, int n, int index, int i, int j);
         void do_nms_sort();

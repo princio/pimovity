@@ -63,7 +63,7 @@ int file2bytes(const char *filename, char **buf, unsigned int *n_bytes) {
     return 0;
 }
 
-int NCS::parse_meta_file() {
+int NCS::parse_meta_file(bool print = false) {
     SPDLOG_DEBUG("Starting «parse_meta_file»");
     char *buf;
     char *labels;
@@ -143,43 +143,44 @@ int NCS::parse_meta_file() {
         sscanf(pch, "%f", &this->nn.anchors[++i]);
         pch = strtok(NULL, ",]");
     }
-    printf("\n\n");
-
-
-    printf("\nYOLOv2:\n");
-
-    printf("\n\tclasses[%d]:\n\t\t", this->nn.nclasses);
-    for(i=0; i < this->nn.nclasses; i++) printf("%s%s", this->nn.classes[i], (i > 0 && i % 10 == 0) ? "\n\t\t" : ", ");
-
-    printf("\n\n\tanchors[%d]:\n\t\t", this->nn.nanchors);
-    for(i=0; i < this->nn.nanchors; i++) printf("%f%s", this->nn.anchors[i], (i > 0 && i %  3 == 0) ? "\n\t\t" : ", ");
-
-    printf("\n\n\t input: [ %5d, %5d, %5d ]\n\toutput: [ %5d, %5d, %5d ]\n\t nbbox: %d\n\t ncoords: %d\n",
-            this->nn.in_w, this->nn.in_h, this->nn.in_c, this->nn.out_w, this->nn.out_h, this->nn.out_z, this->nn.nbbox, this->nn.ncoords);
-
     this->nn.nbbox_total = this->nn.out_w * this->nn.out_h * this->nn.nbbox;
     this->nn.input_size_byte = 4 * this->nn.in_w * this->nn.in_h * this->nn.in_c;
     this->nn.output_size_byte = 4 * this->nn.out_w * this->nn.out_h * this->nn.nbbox * (this->nn.ncoords + 1 + this->nn.nclasses);
-    printf("\n\t input size: %d\n\toutput_size: %d\n\nnbbox total: %d\n\n",
-            this->nn.input_size_byte, this->nn.output_size_byte, this->nn.nbbox_total);
 
     free(buf);
 
-    printf("NN:\n");
-    printf("\t%20s:\t%s\n", "name", this->nn.name);
-    printf("\t%20s:\t%f\n", "thresh", this->nn.thresh);
-    printf("\t%20s:\t[ %d, %d, %d]\n", "input", this->nn.in_w, this->nn.in_h, this->nn.in_c);
-    printf("\t%20s:\t[ %d, %d ]\n", "image", this->nn.im_or_cols, this->nn.im_or_rows);
-    printf("\t%20s:\t[ %d, %d, %d ]\n", "output", this->nn.out_w, this->nn.out_h, this->nn.out_z);
-    printf("\t%20s:\t%d\n", "nbbox", this->nn.nbbox);
-    printf("\t%20s:\t%d\n", "nbbox_total", this->nn.nbbox_total);
-    printf("\t%20s:\t%d\n", "ncoords", this->nn.ncoords);
-    printf("\t%20s:\t%d\n", "nclasses", this->nn.nclasses);
-    printf("\t%20s:\t%d\n", "nanchors", this->nn.nanchors);
-    printf("\t%20s:\t%d\n", "input_size_byte", this->nn.input_size_byte);
-    printf("\t%20s:\t%d\n", "output_size_byte", this->nn.output_size_byte);
+    if(print) {
+        printf("\n\n\nYOLOv2:\n");
 
-    SPDLOG_DEBUG("Done «parse_meta_file»");
+        printf("\n\tclasses[%d]:\n\t\t", this->nn.nclasses);
+        for(i=0; i < this->nn.nclasses; i++) printf("%s%s", this->nn.classes[i], (i > 0 && i % 10 == 0) ? "\n\t\t" : ", ");
+
+        printf("\n\n\tanchors[%d]:\n\t\t", this->nn.nanchors);
+        for(i=0; i < this->nn.nanchors; i++) printf("%f%s", this->nn.anchors[i], (i > 0 && i %  3 == 0) ? "\n\t\t" : ", ");
+
+        printf("\n\n\t input: [ %5d, %5d, %5d ]\n\toutput: [ %5d, %5d, %5d ]\n\t nbbox: %d\n\t ncoords: %d\n",
+                this->nn.in_w, this->nn.in_h, this->nn.in_c, this->nn.out_w, this->nn.out_h, this->nn.out_z, this->nn.nbbox, this->nn.ncoords);
+
+        printf("\n\t input size: %d\n\toutput_size: %d\n\nnbbox total: %d\n\n",
+                this->nn.input_size_byte, this->nn.output_size_byte, this->nn.nbbox_total);
+
+
+        printf("NN:\n");
+        printf("\t%20s:\t%s\n", "name", this->nn.name);
+        printf("\t%20s:\t%f\n", "thresh", this->nn.thresh);
+        printf("\t%20s:\t[ %d, %d, %d]\n", "input", this->nn.in_w, this->nn.in_h, this->nn.in_c);
+        printf("\t%20s:\t[ %d, %d ]\n", "image", this->nn.im_or_cols, this->nn.im_or_rows);
+        printf("\t%20s:\t[ %d, %d, %d ]\n", "output", this->nn.out_w, this->nn.out_h, this->nn.out_z);
+        printf("\t%20s:\t%d\n", "nbbox", this->nn.nbbox);
+        printf("\t%20s:\t%d\n", "nbbox_total", this->nn.nbbox_total);
+        printf("\t%20s:\t%d\n", "ncoords", this->nn.ncoords);
+        printf("\t%20s:\t%d\n", "nclasses", this->nn.nclasses);
+        printf("\t%20s:\t%d\n", "nanchors", this->nn.nanchors);
+        printf("\t%20s:\t%d\n", "input_size_byte", this->nn.input_size_byte);
+        printf("\t%20s:\t%d\n", "output_size_byte", this->nn.output_size_byte);
+
+        SPDLOG_DEBUG("Done «parse_meta_file»");
+    }
     return 0;
 }
 

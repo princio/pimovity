@@ -127,7 +127,7 @@ int main (int argc, char** argv) {
 	}
 	spdlog::set_level(log_level);
 
-	printf("LOG LEVEL = %d", log_level);
+	printf("LOG LEVEL = %d\n", log_level);
 
 
     printf("HoloOj for Raspberry:\n\t%6s = %s\n\t%6s = %u\n\t%6s = %s\n\t%6s = %s\t%6s = %s\n",
@@ -139,7 +139,7 @@ int main (int argc, char** argv) {
 
     coo.init(graph, meta, thresh);
 
-    coo.run();
+    coo.run(port);
 
 	exit(0);
 
@@ -162,6 +162,6 @@ int main (int argc, char** argv) {
 	coo.ncs->nn.bboxes = (bbox*) calloc(5, sizeof(bbox));
 	coo.elaborate();
 
-    coo.run();
+    coo.run(port);
 
 }
