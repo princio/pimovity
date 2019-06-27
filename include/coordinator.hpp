@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <ifaddrs.h>
 
+#include <thread>
 #include <opencv2/opencv.hpp>
 
 
@@ -78,6 +79,11 @@ class Coordinator {
         cv::Rect roi;
         int impixel_size = 3;
         float *ncs_pointer;
+
+        std::thread *inference_thread;
+        std::mutex inf_mutex;
+        std::atomic<int> inference_atomic;
+        int elaborate_ncs();
 
         /** socket **/
         int timeouts = 10;

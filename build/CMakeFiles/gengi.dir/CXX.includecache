@@ -29,6 +29,8 @@ sys/types.h
 -
 ifaddrs.h
 -
+thread
+-
 opencv2/opencv.hpp
 -
 

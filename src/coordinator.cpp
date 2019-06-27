@@ -33,6 +33,16 @@
 #define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
 #define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
 
+enum AtomicNCS {
+	NCS_NOT_DOING,
+	NCS_TODO,
+	NCS_DOING,
+	NCS_DONE,
+};
+// #define NOT_DOING 0
+// #define TODO      1
+// #define DOING     2
+// #define DONE      3
 
 int decode_jpeg(byte *imj, int imjl, byte *im) {
     tjhandle tjh;
@@ -484,7 +494,13 @@ int Coordinator::elaborateImage() {
 	cv::imwrite("../phs/im.jpg", mat_raw_cropped);
 
 	/** only with NCS */
-	cv::resize(mat_raw_cropped, mat_raw_resized, cv::Size(ncs->nn.im_resized_cols, ncs->nn.im_resized_rows));
+	int expected = NCS_NOT_DOING;
+	if(inference_atomic.compare_exchange_strong(expected, NCS_NOT_DOING)) {
+		cv::resize(mat_raw_cropped, mat_raw_resized, cv::Size(ncs->nn.im_resized_cols, ncs->nn.im_resized_rows));
+		inference_atomic = NCS_TODO;
+		SPDLOG_DEBUG("Atomic: NCS_NOT_DOING -> NCS_TODO.");
+	}
+
 
 	SPDLOG_TRACE("Stop.");
 	return 0;
@@ -506,6 +522,50 @@ int Coordinator::recvImage() {
 	return 0;
 }
 
+int Coordinator::elaborate_ncs() {
+	int expected, nbbox;
+	while(1) {
+		expected = NCS_TODO;
+		if(inference_atomic.compare_exchange_strong(expected, NCS_DOING)) {
+			SPDLOG_DEBUG("Atomic: NCS_TODO -> NCS_DOING.");
+			nbbox = ncs->inference_byte(mat_raw_resized.data, 3);
+
+
+			for(int i = nbbox-1; i >= 0; --i) {
+				rgb_pixel color;
+				byte c1 = 250 * i / 3;
+				byte c2 = 250 * i / 3;
+				byte c3 = 250 * i / 3;
+				SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
+					ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
+
+				drawBbox((rgb_pixel*) mat_raw.data, ncs->nn.bboxes[i].box, color);
+			}
+
+			if(nbbox >= 0) {
+				std::stringstream fname;
+				SPDLOG_WARN("Showing image.");
+				fname << "/home/developer/Desktop/pr2/phs/im_" << ++imcounter << ".jpg";
+				cv::imwrite(fname.str(), mat_raw);
+				try {
+					cv::imwrite(fname.str(), mat_raw);
+				}
+				catch (std::runtime_error& ex) {
+					fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
+					return 1;
+				}
+			}
+			
+			inference_atomic = NCS_DONE;
+			SPDLOG_DEBUG("Atomic: NCS_DOING -> NCS_DONE.");
+		}
+		else {
+			SPDLOG_DEBUG("Atomic: NCS_NOT_DOING.");
+			usleep(100);
+		}
+	}
+}
+
 
 int Coordinator::recvImages() {
 	SPDLOG_TRACE("Start.");
@@ -515,6 +575,11 @@ int Coordinator::recvImages() {
 	memset(&spacket, 0, sizeof(SendPacket));
 	spacket.stx = STX;
 	ncs->nn.bboxes = spacket.bboxes;
+
+	inference_thread = new std::thread(&Coordinator::elaborate_ncs, this);
+	inference_thread->join();
+
+	inference_atomic.store(0, std::memory_order::memory_order_release);
 
 	if (0 > send(fd_pi, stxs, 8, 0)) return -1;
 
@@ -550,6 +615,12 @@ int Coordinator::recvImages() {
 		consecutive_wrong_packets = 0;
 
 		//sl = send(fd_uy, rpacket, rpacket->l + 8, 0);
+		int expected = NCS_DONE;
+		if(inference_atomic.compare_exchange_weak(expected, NCS_DONE)) {
+			sl = send(fd_uy, (void*) &spacket, sizeof(SendPacket), 0);
+			inference_atomic = NCS_NOT_DOING;
+			SPDLOG_DEBUG("Atomic: NCS_DONE -> NCS_NOT_DOING.");
+		}
 
 		if(0 > elaborateImage()) return -1;
 
@@ -558,6 +629,9 @@ int Coordinator::recvImages() {
 		rpacket->l = jpeg_buffer.size();
 		sl = send(fd_uy, rpacket, 8, 0);
 		sl = send(fd_uy, jpeg_buffer.data(), jpeg_buffer.size(), 0);
+
+		inference_thread = new std::thread(&NCS::inference_byte, ncs, mat_raw_resized.data, 3);
+		inference_thread->join();
 
 		// if(nbbox > 0) {
 		// 	int size = 12 + nbbox * sizeof(bbox);
