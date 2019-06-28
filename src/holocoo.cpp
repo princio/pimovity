@@ -27,8 +27,8 @@
 #include <unistd.h>
 #include <stdexcept>
 
-#include <opencv2/opencv.hpp>
-#include <opencv2/imgcodecs.hpp>
+//#include <opencv2/opencv.hpp>
+//#include <opencv2/imgcodecs.hpp>
 
 #define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
 #define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
@@ -338,24 +338,8 @@ int socket_recv_config() {
 int HoloCoo::elaborate() {
 	SPDLOG_DEBUG("Start elaborating {} bytes.", rpacket->l);
 	int nbbox;
-	cv::Mat mat_raw;
-	cv::Mat mat_raw_resized;
-
-	printf("##%p\n", (void*) rpacket->image);
-
-	if(!isBMP) {
-		cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
-		mat_raw = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
-		cv::resize(mat_raw, mat_raw_resized, cv::Size(ncs->nn.im_resized_cols, ncs->nn.im_resized_rows));
-		// mat_raw_resized.convertTo(mat_raw_resized, CV_8UC3);
-		// mat_raw_resized.cv
-	}
-	REPORTSPD(mat_raw_resized.total() != ncs->nn.im_resized_size, "Resizing sizes not matching yolov2 input: {} instead of {}.", mat_raw_resized.total(), ncs->nn.im_resized_size);
-
-	//memcpy(ncs_pointer, mat_raw_resized.data, imsize_resized*4);
-	// cv::imshow("nn_input", mat_raw_resized);
-	// cv::waitKey(0);
-	nbbox = ncs->inference_byte(mat_raw_resized.data, 5);
+	
+	//nbbox = ncs->inference_byte(mat_raw_resized.data, 5);
 	SPDLOG_INFO("Found {} bboxes.", nbbox);
 
 
@@ -519,15 +503,10 @@ int HoloCoo::recvImagesLoop() {
 
 int HoloCoo::recvImages() {
 	SPDLOG_TRACE("Start.");
-	auto images_loop = new std::thread(&HoloCoo::recvImagesLoop, this);
-	inference_thread = new std::thread(&HoloCoo::elaborate_ncs, this);
-
-
-	inference_thread->join();
-	images_loop->join();
-
+	
+	recvImagesLoop();
+	
 	free(rpacket);
-
 	SPDLOG_TRACE("END.");
 	return 0;
 }
@@ -537,9 +516,6 @@ int HoloCoo::init(const char *graph, const char *meta, float thresh) {
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
 	ncs->initNN();
 	ncs->nn.thresh = thresh;
-
-	cv::namedWindow("original", cv::WINDOW_AUTOSIZE );// Create a window for display.
-	cv::namedWindow("nn_input", cv::WINDOW_AUTOSIZE );// Create a window for display.
 
 }
 
@@ -578,8 +554,6 @@ int HoloCoo::run(unsigned int port) {
 	else
 		SPDLOG_INFO("Sockets closed.");
 
-
-	cv::destroyAllWindows();
 
 	ncs->~NCS();
 
