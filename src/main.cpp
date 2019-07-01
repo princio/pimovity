@@ -2,7 +2,7 @@
 
 
 #include "holooj.hpp"
-#include "coordinator.hpp"
+#include "holocoo.hpp"
 
 #include <stdio.h>
 #include <string.h>
@@ -15,11 +15,6 @@
 #include <time.h>
 
 
-#include <opencv2/opencv.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 #ifdef DEBUG
 #define CHECK(i) if(i < 0 || i > wh) printf("Overflow!");
@@ -135,7 +130,7 @@ int main (int argc, char** argv) {
 
 
 	unsigned int nb;
-	Coordinator coo(iface.c_str(), port);
+	HoloCoo coo(iface.c_str(), port);
 
     coo.init(graph, meta, thresh);
 
@@ -160,7 +155,6 @@ int main (int argc, char** argv) {
 
 	coo.rpacket->l = coo.rpacket_buffer_size;
 	coo.ncs->nn.bboxes = (bbox*) calloc(5, sizeof(bbox));
-	coo.elaborate();
 
     coo.run(port);
 

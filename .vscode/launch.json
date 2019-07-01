@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "/home/developer/Desktop/pr2/build/gengi",
-            "args": [ "--port 8001"],
+            "args": [ "--port", "56789", "-v", "0"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [],

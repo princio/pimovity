@@ -123,7 +123,7 @@ int HoloCoo::startServer() {
 }
 
 
-int HoloCoo::waitUnity() {
+int HoloCoo::waitHololens() {
 	SPDLOG_TRACE("Start.");
 	int r, id, fd;
 	struct sockaddr_in addr;
@@ -142,8 +142,8 @@ int HoloCoo::waitUnity() {
 	int ret;
 	byte buf[8];
 
-	ret = recv(fd_uy, &buf, 12, 0); //REMEMBER ALIGNMENT! char[6] equal to char[8] because of it.
-	REPORTSPD(ret < 12, "Too few bytes ({} instead of 12).");
+	ret = recv(fd_uy, &buf, 16, 0); //REMEMBER ALIGNMENT! char[6] equal to char[8] because of it.
+	REPORTSPD(ret < 16, "Too few bytes ({} instead of 16).");
 
 	ncs->nn.im_or_cols  = (*((int*) buf));
 	ncs->nn.im_or_rows  = (*((int*) &buf[4]));
@@ -152,6 +152,21 @@ int HoloCoo::waitUnity() {
 	ncs->nn.im_resized_rows = (*((int*) &buf[12]));
 
 	ncs->nn.im_resized_size = ncs->nn.im_resized_cols * ncs->nn.im_resized_rows;
+	ncs->nn.im_resized_size_bytes = 3 * ncs->nn.im_resized_size;
+
+	im_bmp = (byte*) calloc(ncs->nn.im_resized_size_bytes, 1);
+
+    ncs->nn.input_letterbox = &ncs->nn.input[((ncs->nn.in_h - ncs->nn.im_resized_rows) >> 1) * ncs->nn.in_w * 3];
+
+	SPDLOG_CRITICAL("\n{}x{}\n{}x{}\n{}*3={}", ncs->nn.im_or_cols, ncs->nn.im_or_rows, ncs->nn.im_resized_cols, ncs->nn.im_resized_rows, ncs->nn.im_resized_size, ncs->nn.im_resized_size_bytes);
+
+	memcpy(buf,     &STX, 4);
+	memcpy(buf + 4, &ncs->nn.classes_buffer_length, 4);
+	memcpy(buf + 8, &ncs->nn.nclasses, 4);
+	ret = send(fd_uy, buf, 12, 0); //REMEMBER ALIGNMENT! char[6] equal to char[8] because of it.
+
+	ret = send(fd_uy, &ncs->nn.classes_buffer, ncs->nn.classes_buffer_length, 0); //REMEMBER ALIGNMENT! char[6] equal to char[8] because of it.
+	REPORTSPD(ret < ncs->nn.classes_buffer_length, "Too few bytes ({} instead of {}).", ncs->nn.classes_buffer_length);
 
 
 	return 0;
@@ -309,82 +324,13 @@ int HoloCoo::drawBbox(rgb_pixel *im, Box b, rgb_pixel color) {
 }
 
 
-int socket_recv_config() {
-
-	printf("%d\t%dx%d, %s\n", config.STX, config.rows, config.cols, config.isBMP ? "BMP" : "JPEG");
-
-	buffer_size = (OH_SIZE + config.rows*config.cols*3) >> (config.isBMP ? 0 : 4);
-	image_size = config.rows*config.cols*3;
-
-	printf("Buffer size set to %d.\n", buffer_size);
-
-	if(socket_wait_data(SEND)) return -1;
-
-	int c = NY2_CLASSES;
-	int cl = sizeof(ny2_categories);
-	byte cbuf[cl];
-
-	memcpy(cbuf,		&config.STX, 	4);
-	memcpy(cbuf + 4,	&cl, 			4);
-	memcpy(cbuf + 8,	&c, 	4);
-	ret = send(sockfd_read, cbuf, 12, 0);
-
-	memcpy(cbuf, 	 	ny2_categories, cl);
-	ret = send(sockfd_read, cbuf, cl, 0);
-
-	return 0;
-}
-
-int HoloCoo::elaborate() {
-	SPDLOG_DEBUG("Start elaborating {} bytes.", rpacket->l);
-	int nbbox;
-	
-	//nbbox = ncs->inference_byte(mat_raw_resized.data, 5);
-	SPDLOG_INFO("Found {} bboxes.", nbbox);
-
-
-	for(int i = nbbox-1; i >= 0; --i) {
-    	rgb_pixel color;
-		byte c1 = 250 * i / 3;
-		byte c2 = 250 * i / 3;
-		byte c3 = 250 * i / 3;
-		SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
-			ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
-
-		drawBbox((rgb_pixel*) mat_raw.data, ncs->nn.bboxes[i].box, color);
-	}
-	// cv::Mat mat_nn_input (416, 416, CV_32FC3, ncs->nn.input);
-	// cv::imshow("nn_input", mat_nn_input);
-	// cv::waitKey(0);
-
-	if(nbbox >= 0) {
-		std::stringstream fname;
-		SPDLOG_WARN("Showing image.");
-		fname << "/home/developer/Desktop/pr2/phs/im_" << ++imcounter << ".jpg";
-		cv::imwrite(fname.str(), mat_raw);
-		try {
-			cv::imwrite(fname.str(), mat_raw);
-		}
-		catch (std::runtime_error& ex) {
-			fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-			return 1;
-		}
-		// cv::imshow("original", mat_raw);
-		// cv::waitKey(0);
-	}
-
-	SPDLOG_DEBUG("Finished elaborating: found {} nbboxes.", nbbox);
-	return nbbox;
-}
-
-
 int HoloCoo::elaborateImage() {
 	SPDLOG_DEBUG("Start image elaboration ({} bytes).", rpacket->l);
 
 
     SPDLOG_WARN("images={}", counter);
 
-	decode_jpeg(rpacket->image, rpacket->l, im_bmp);
+	//decode_jpeg(rpacket->image, rpacket->l, im_bmp);
 
 	SPDLOG_TRACE("Stop.");
 	return 0;
@@ -392,82 +338,74 @@ int HoloCoo::elaborateImage() {
 
 
 int HoloCoo::recvImage() {
+	SPDLOG_TRACE("Start.");
 
-
-	int rl = recv(fd_pi, (byte*) rpacket, 8, MSG_WAITALL);
+	SPDLOG_DEBUG("Waiting image...");
+	int rl = recv(fd_uy, (byte*) rpacket, 8 + ncs->nn.im_resized_size_bytes, MSG_WAITALL);
 	REPORTSPD(rpacket->stx != STX, "Wrong STX ({} instead of {}).", rpacket->stx, STX);
 
-	if(rpacket_buffer_size < rpacket->l) {
-		printf("Image too large: %ud > %d. Skipped.", rpacket_buffer_size, rpacket->l);
+	if((int) rpacket_buffer_size < rpacket->l) {
+		SPDLOG_WARN("Image too large: {} > {}. Skipped.", rpacket->l, rpacket_buffer_size);
 		return -2;
 	}
 
-	rl = recv(fd_pi, (byte*) rpacket->image, rpacket->l, MSG_WAITALL);
-	REPORTSPD(rpacket->stx != STX, "Too few bytes received ({} instead of {}).", rl, rpacket->l);
+	// rl = recv(fd_pi, (byte*) rpacket->image, rpacket->l, MSG_WAITALL);
+	// REPORTSPD(rpacket->stx != STX, "Too few bytes received ({} instead of {}).", rl, rpacket->l);
 
+	SPDLOG_TRACE("Stop.");
 	return 0;
 }
 
 int HoloCoo::elaborate_ncs() {
+	SPDLOG_TRACE("Start.");
 	int expected, nbbox;
-	while(1) {
-		expected = NCS_TODO;
-		if(inference_atomic.compare_exchange_strong(expected, NCS_DOING)) {
-			SPDLOG_DEBUG("Atomic: NCS_TODO -> NCS_DOING.");
-			nbbox = ncs->inference_byte(mat_raw_resized.data, 3);
-			SPDLOG_DEBUG("Inference done.");
 
+	memcpy(im_bmp, rpacket->image, rpacket->l);
 
+	nbbox = ncs->inference_byte(im_bmp, 3);
 
-			for(int i = nbbox-1; i >= 0; --i) {
-				rgb_pixel color;
-				byte c1 = 250 * i / 3;
-				byte c2 = 250 * i / 3;
-				byte c3 = 250 * i / 3;
-				SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
-					ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
+	SPDLOG_DEBUG("Inference done: found {} nbbox", nbbox);
 
-				drawBbox((rgb_pixel*) mat_raw.data, ncs->nn.bboxes[i].box, color);
-			}
+	spacket.n = nbbox;
+	send(fd_uy, (byte*) &spacket, sizeof(SendPacket), 0);
 
-			if(nbbox >= 0) {
-				std::stringstream fname;
-				fname << "/home/developer/Desktop/pr2/phs/im_" << ++imcounter << ".jpg";
-				cv::imwrite(fname.str(), mat_raw);
-				try {
-					cv::imwrite(fname.str(), mat_raw);
-				}
-				catch (std::runtime_error& ex) {
-					fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-					return 1;
-				}
-			}
-			
-			inference_atomic = NCS_DONE;
-			SPDLOG_DEBUG("Atomic: NCS_DOING -> NCS_DONE.");
-		}
-		else {
-			//SPDLOG_DEBUG("Atomic: NCS_NOT_DOING.");
-			usleep(100);
-		}
+	for(int i = nbbox-1; i >= 0; --i) {
+		rgb_pixel color;
+		byte c1 = 250 * i / 3;
+		byte c2 = 250 * i / 3;
+		byte c3 = 250 * i / 3;
+		SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
+			ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
+
+		//drawBbox((rgb_pixel*) im_bmp, ncs->nn.bboxes[i].box, color);
 	}
+	SPDLOG_TRACE("Stop {}.", nbbox);
+	return nbbox;
 }
 
 int HoloCoo::recvImagesLoop() {
+	SPDLOG_TRACE("Start.");
 	int consecutive_wrong_packets = 0;
 	int stxs[2] = { STX, STX };
 	rpacket = (RecvPacket *) calloc(sizeof(RecvPacket) + rpacket_buffer_size, 1);
 	memset(&spacket, 0, sizeof(SendPacket));
 	spacket.stx = STX;
 	ncs->nn.bboxes = spacket.bboxes;
+
 	
 
 	while(1) {
-		int nbbox, sl;
-		REPORTSPD_ERRNO(0 > ioctl(fd_pi, FIONREAD, &sl));
-		printf("Bytes available: %d\n", sl);
+		int nbbox, sl, ba;
+		// REPORTSPD_ERRNO(0 > ioctl(fd_uy, FIONREAD, &ba));
 		
-		if(sl = recvImage()) {
+		// if(ba < imsize_bytes) {
+		// 	SPDLOG_TRACE("No enough bytes: {} < {}", ba, imsize_bytes);
+		// 	usleep(100000);
+		// 	continue;
+		// }
+		// SPDLOG_TRACE("No enough bytes: {} < {}", ba, imsize_bytes);
+		sl = recvImage();
+		if(sl) {
 			if(sl == -2) {
 				continue;
 			} else
@@ -478,39 +416,21 @@ int HoloCoo::recvImagesLoop() {
 				break;
 			} else {
 				int bytes_available = -1;
-				REPORTSPD_ERRNO(0 > ioctl(fd_pi, FIONREAD, &bytes_available));
-				recv(fd_pi, (byte*) rpacket, bytes_available, 0);
 				SPDLOG_WARN("Wrong incoming packet from Pi: skip to next while iteration (consecutives = {}, {}).", consecutive_wrong_packets, bytes_available);
 				continue;
 			}
 		}
 		consecutive_wrong_packets = 0;
 
-		if(0 > elaborateImage()) return -1;
-		
+		//if(0 > elaborateImage()) break;
 
-		sl = send(fd_pi, stxs, 8, 0);
-
-		SPDLOG_INFO("Jpeg vector size: {}.", jpeg_buffer.size());
-
-		rpacket->l = jpeg_buffer.size();
-		sl = send(fd_uy, rpacket, 8, 0);
-		sl = send(fd_uy, jpeg_buffer.data(), jpeg_buffer.size(), 0);
-
+		if(0 > elaborate_ncs())  break;
 	}
-	
-}
 
-int HoloCoo::recvImages() {
-	SPDLOG_TRACE("Start.");
-	
-	recvImagesLoop();
-	
 	free(rpacket);
 	SPDLOG_TRACE("END.");
-	return 0;
+	return -1;
 }
-
 
 int HoloCoo::init(const char *graph, const char *meta, float thresh) {
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
@@ -527,25 +447,18 @@ int HoloCoo::run(unsigned int port) {
 
 	ret = INT32_MAX;
 
-
-
-	
-	// SPDLOG_INFO("Connecting to Pi...");
-	// while(true) {
-	// 	ret = connectToPi();
-	// 	if(ret < 0) usleep(3000*1000);
-	// 	else break;
-	// }
-
 	SPDLOG_INFO("Starting server...");
 	if(startServer()) return -1;
-	SPDLOG_INFO("Waiting for Pi and Unity...");
-	ret = waitPiAndUy();
+
+
+
+	SPDLOG_INFO("Waiting for Hololens...");
+	ret = waitHololens();
 	if(ret < 0) return -1;
 
 	if(ncs->initDevice()) exit(1);
 
-	ret = recvImages();
+	ret = recvImagesLoop();
 	if(ret < 0) {
 		return -1;
 	}
@@ -564,14 +477,20 @@ int HoloCoo::run(unsigned int port) {
 int HoloCoo::closeSockets() {
 	int r;
 	
-	r = close(fd_pi);
-	REPORTSPD(r < 0, "Error during closing Pi socket.");
+	if(fd_pi > 0) {
+		r = close(fd_pi);
+		REPORTSPD(r < 0, "Error during closing Pi socket.");
+	}
 
-	r = close(fd_uy);
-	REPORTSPD(r < 0, "Error during closing Unity socket.");
+	if(fd_uy > 0) {
+		r = close(fd_uy);
+		REPORTSPD(r < 0, "Error during closing Unity socket.");
+	}
 
-	r = close(fd_server);
-	REPORTSPD(r < 0, "Error during closing Server socket.");
+	if(fd_server > 0) {
+		r = close(fd_server);
+		REPORTSPD(r < 0, "Error during closing Server socket.");
+	}
 
 	return 0;
 }

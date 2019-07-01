@@ -4,10 +4,10 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/pi/pimovity/src/holocoo.cpp" "/home/pi/pimovity/build/CMakeFiles/gengi.dir/src/holocoo.cpp.o"
-  "/home/pi/pimovity/src/main.cpp" "/home/pi/pimovity/build/CMakeFiles/gengi.dir/src/main.cpp.o"
-  "/home/pi/pimovity/src/ncs.cpp" "/home/pi/pimovity/build/CMakeFiles/gengi.dir/src/ncs.cpp.o"
-  "/home/pi/pimovity/src/ny2.cpp" "/home/pi/pimovity/build/CMakeFiles/gengi.dir/src/ny2.cpp.o"
+  "/home/developer/Desktop/pr2/src/holocoo.cpp" "/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir/src/holocoo.cpp.o"
+  "/home/developer/Desktop/pr2/src/main.cpp" "/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir/src/main.cpp.o"
+  "/home/developer/Desktop/pr2/src/ncs.cpp" "/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir/src/ncs.cpp.o"
+  "/home/developer/Desktop/pr2/src/ny2.cpp" "/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir/src/ny2.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
@@ -19,7 +19,7 @@ set(CMAKE_TARGET_DEFINITIONS_CXX
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../include"
-  "/home/pi/spdlog/bin/include"
+  "/home/developer/spdlog/bin/include"
   )
 
 # Targets to which this target links.

@@ -40,6 +40,7 @@ class HoloCoo {
         float *ncs_pointer;
         byte *im_bmp;
         
+        int elaborateImage();
         int elaborate_ncs();
         int recvImagesLoop();
 
@@ -65,13 +66,11 @@ class HoloCoo {
         int send(int fd, void* buf, size_t len, int flags);
         int getAddress(struct in_addr *addr, const char *iface);
         int startServer();
-        int waitUnity();
+        int waitHololens();
         int closeSockets();
         int recvConfig();
         int recvImage();
         int recvImages();
-        int elaborate();
-        int elaborateImage();
         int drawBbox(rgb_pixel *im, Box b, rgb_pixel color);
         int saveImage2Jpeg(byte *im, int index);
         int run(unsigned int);

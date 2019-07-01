@@ -110,7 +110,10 @@ int NCS::parse_meta_file(bool print = false) {
         pch = strtok (NULL, "\"");
     }
 
-    this->nn.classes_buffer = (char*) calloc(strlen(labels) + 80, 1);
+    this->nn.classes_buffer = (char*) calloc(strlen(labels) + this->nn.nclasses, 1);
+    char tmpbuf[strlen(labels) + this->nn.nclasses];
+    int ofs[this->nn.nclasses];
+    this->nn.classes_buffer_length = strlen(labels) + this->nn.nclasses;
     this->nn.classes = (char**) calloc(this->nn.nclasses, sizeof(char*));
     pch = strtok(labels, "\"");
     int i = 0;
@@ -118,13 +121,21 @@ int NCS::parse_meta_file(bool print = false) {
     while (pch != NULL)
     {
         if(strstr(pch, ",") == NULL) {
-            strcpy(this->nn.classes_buffer + l, pch);
-            this->nn.classes[i++] = this->nn.classes_buffer + l;
+            strcpy(tmpbuf + l, pch);
+            ofs[i++] = l;
             l += strlen(pch);
-            this->nn.classes_buffer[l] = '\0';
+            tmpbuf[l] = '\0';
             ++l;
         }
         pch = strtok(NULL, "\"");
+    }
+
+    this->nn.classes_buffer_length = l;
+    this->nn.classes_buffer = (char*) calloc(l, 1);
+    memcpy(nn.classes_buffer, tmpbuf, l);
+    for(i=0; i < nn.nclasses; i++) {
+        nn.classes[i] = nn.classes_buffer + ofs[i];
+        printf("%s\n", nn.classes[i]);
     }
 
     this->nn.nanchors = 1;
@@ -290,10 +301,9 @@ int NCS::setSizes(int cols_or, int rows_or) {
 int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
     SPDLOG_TRACE("Start.");
 
-    SPDLOG_WARN("inference={}", inf_counter++);
-
+    int nbbox;
 	int i = 0;
-    int l = nn.im_resized_size * 3 - 3;
+    int l = nn.im_resized_size_bytes - 3;
 	float *y = nn.input_letterbox;
     int rgb2bgr = 2;
 	while(i <= l) {
@@ -303,16 +313,7 @@ int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
         i += 3;
 	}
 
-#ifdef OPENCV
-    IplImage *iplim = cvCreateImage(cvSize(this->nn.in_w, this->nn.in_h), IPL_DEPTH_32F, 3);
-    memcpy(iplim->imageData, this->nn.input, this->nn.input_size_byte*4);
-    cvShowImage("bibo2", iplim);
-    cvUpdateWindow("bibo2");
-    cvReleaseImage(&iplim);
-    // cvWaitKey(0);
-#endif
-
-    int nbbox = this->inference(nbboxes_max);
+    nbbox = this->inference(nbboxes_max);
     
     if(nbbox < 0) return -1;
 

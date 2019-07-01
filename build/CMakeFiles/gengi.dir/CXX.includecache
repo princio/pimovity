@@ -52,13 +52,13 @@ string
 holooj.hpp
 ../include/holooj.hpp
 
-/home/pi/pimovity/src/holocoo.cpp
+/home/developer/Desktop/pr2/src/holocoo.cpp
 holooj.hpp
-/home/pi/pimovity/src/holooj.hpp
+/home/developer/Desktop/pr2/src/holooj.hpp
 holocoo.hpp
-/home/pi/pimovity/src/holocoo.hpp
+/home/developer/Desktop/pr2/src/holocoo.hpp
 ncs.hpp
-/home/pi/pimovity/src/ncs.hpp
+/home/developer/Desktop/pr2/src/ncs.hpp
 stdio.h
 -
 string.h
@@ -106,11 +106,11 @@ unistd.h
 stdexcept
 -
 
-/home/pi/pimovity/src/main.cpp
+/home/developer/Desktop/pr2/src/main.cpp
 holooj.hpp
-/home/pi/pimovity/src/holooj.hpp
-coordinator.hpp
-/home/pi/pimovity/src/coordinator.hpp
+/home/developer/Desktop/pr2/src/holooj.hpp
+holocoo.hpp
+/home/developer/Desktop/pr2/src/holocoo.hpp
 stdio.h
 -
 string.h
@@ -129,24 +129,14 @@ errno.h
 -
 time.h
 -
-opencv2/opencv.hpp
--
-opencv2/imgcodecs.hpp
--
-opencv2/imgproc.hpp
--
-opencv2/core/core.hpp
--
-opencv2/highgui/highgui.hpp
--
 
-/home/pi/pimovity/src/ncs.cpp
+/home/developer/Desktop/pr2/src/ncs.cpp
 holooj.hpp
-/home/pi/pimovity/src/holooj.hpp
+/home/developer/Desktop/pr2/src/holooj.hpp
 ncs.hpp
-/home/pi/pimovity/src/ncs.hpp
+/home/developer/Desktop/pr2/src/ncs.hpp
 ny2.hpp
-/home/pi/pimovity/src/ny2.hpp
+/home/developer/Desktop/pr2/src/ny2.hpp
 time.h
 -
 cstdio
@@ -162,9 +152,9 @@ time.h
 mvnc.h
 -
 
-/home/pi/pimovity/src/ny2.cpp
+/home/developer/Desktop/pr2/src/ny2.cpp
 ny2.hpp
-/home/pi/pimovity/src/ny2.hpp
+/home/developer/Desktop/pr2/src/ny2.hpp
 float.h
 -
 math.h
@@ -180,13 +170,13 @@ cv.h
 highgui.h
 -
 
-/home/pi/spdlog/bin/include/spdlog/common-inl.h
+/home/developer/spdlog/bin/include/spdlog/common-inl.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/common.h
 
-/home/pi/spdlog/bin/include/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/common.h
 spdlog/tweakme.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/tweakme.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/tweakme.h
 atomic
 -
 chrono
@@ -210,47 +200,47 @@ codecvt
 locale
 -
 spdlog/fmt/fmt.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/fmt/fmt.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/fmt/fmt.h
 common-inl.h
-/home/pi/spdlog/bin/include/spdlog/common-inl.h
+/home/developer/spdlog/bin/include/spdlog/common-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/details/console_globals.h
+/home/developer/spdlog/bin/include/spdlog/details/console_globals.h
 spdlog/details/null_mutex.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/null_mutex.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/null_mutex.h
 mutex
 -
 
-/home/pi/spdlog/bin/include/spdlog/details/fmt_helper.h
+/home/developer/spdlog/bin/include/spdlog/details/fmt_helper.h
 chrono
 -
 type_traits
 -
 spdlog/fmt/fmt.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/fmt/fmt.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/fmt/fmt.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/common.h
 
-/home/pi/spdlog/bin/include/spdlog/details/log_msg-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/log_msg-inl.h
 spdlog/details/log_msg.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/log_msg.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/log_msg.h
 spdlog/details/os.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/os.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/os.h
 
-/home/pi/spdlog/bin/include/spdlog/details/log_msg.h
+/home/developer/spdlog/bin/include/spdlog/details/log_msg.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/common.h
 string
 -
 log_msg-inl.h
-/home/pi/spdlog/bin/include/spdlog/details/log_msg-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/log_msg-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/details/null_mutex.h
+/home/developer/spdlog/bin/include/spdlog/details/null_mutex.h
 atomic
 -
 
-/home/pi/spdlog/bin/include/spdlog/details/os-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/os-inl.h
 spdlog/details/os.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/os.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/os.h
 algorithm
 -
 chrono
@@ -290,27 +280,27 @@ sys/syscall.h
 sys/thr.h
 -
 
-/home/pi/spdlog/bin/include/spdlog/details/os.h
+/home/developer/spdlog/bin/include/spdlog/details/os.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/common.h
 ctime
 -
 os-inl.h
-/home/pi/spdlog/bin/include/spdlog/details/os-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/os-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/details/pattern_formatter-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/pattern_formatter-inl.h
 spdlog/details/pattern_formatter.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/pattern_formatter.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/pattern_formatter.h
 spdlog/details/fmt_helper.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/fmt_helper.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/fmt_helper.h
 spdlog/details/log_msg.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/log_msg.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/log_msg.h
 spdlog/details/os.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/os.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/os.h
 spdlog/fmt/fmt.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/fmt/fmt.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/fmt/fmt.h
 spdlog/formatter.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/formatter.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/formatter.h
 array
 -
 chrono
@@ -334,15 +324,15 @@ utility
 vector
 -
 
-/home/pi/spdlog/bin/include/spdlog/details/pattern_formatter.h
+/home/developer/spdlog/bin/include/spdlog/details/pattern_formatter.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/common.h
 spdlog/details/log_msg.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/log_msg.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/log_msg.h
 spdlog/details/os.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/os.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/os.h
 spdlog/formatter.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/formatter.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/formatter.h
 chrono
 -
 ctime
@@ -354,13 +344,13 @@ string
 vector
 -
 pattern_formatter-inl.h
-/home/pi/spdlog/bin/include/spdlog/details/pattern_formatter-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/pattern_formatter-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/details/periodic_worker-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/periodic_worker-inl.h
 spdlog/details/periodic_worker.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/periodic_worker.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/periodic_worker.h
 
-/home/pi/spdlog/bin/include/spdlog/details/periodic_worker.h
+/home/developer/spdlog/bin/include/spdlog/details/periodic_worker.h
 chrono
 -
 condition_variable
@@ -372,23 +362,23 @@ mutex
 thread
 -
 periodic_worker-inl.h
-/home/pi/spdlog/bin/include/spdlog/details/periodic_worker-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/periodic_worker-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/details/registry-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/registry-inl.h
 spdlog/details/registry.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/registry.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/registry.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/common.h
 spdlog/details/periodic_worker.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/periodic_worker.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/periodic_worker.h
 spdlog/logger.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/logger.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/logger.h
 spdlog/details/pattern_formatter.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/details/pattern_formatter.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/details/pattern_formatter.h
 spdlog/sinks/wincolor_sink.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/sinks/wincolor_sink.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/sinks/wincolor_sink.h
 spdlog/sinks/ansicolor_sink.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/sinks/ansicolor_sink.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/sinks/ansicolor_sink.h
 chrono
 -
 functional
@@ -400,9 +390,9 @@ string
 unordered_map
 -
 
-/home/pi/spdlog/bin/include/spdlog/details/registry.h
+/home/developer/spdlog/bin/include/spdlog/details/registry.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/details/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/details/spdlog/common.h
 chrono
 -
 functional
@@ -416,13 +406,13 @@ unordered_map
 mutex
 -
 registry-inl.h
-/home/pi/spdlog/bin/include/spdlog/details/registry-inl.h
+/home/developer/spdlog/bin/include/spdlog/details/registry-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/details/synchronous_factory.h
+/home/developer/spdlog/bin/include/spdlog/details/synchronous_factory.h
 registry.h
-/home/pi/spdlog/bin/include/spdlog/details/registry.h
+/home/developer/spdlog/bin/include/spdlog/details/registry.h
 
-/home/pi/spdlog/bin/include/spdlog/fmt/bundled/core.h
+/home/developer/spdlog/bin/include/spdlog/fmt/bundled/core.h
 cassert
 -
 cstdio
@@ -444,9 +434,9 @@ functional
 fmt/core.h
 -
 
-/home/pi/spdlog/bin/include/spdlog/fmt/bundled/format-inl.h
+/home/developer/spdlog/bin/include/spdlog/fmt/bundled/format-inl.h
 format.h
-/home/pi/spdlog/bin/include/spdlog/fmt/bundled/format.h
+/home/developer/spdlog/bin/include/spdlog/fmt/bundled/format.h
 string.h
 -
 cctype
@@ -470,7 +460,7 @@ windows.h
 windows.h
 -
 
-/home/pi/spdlog/bin/include/spdlog/fmt/bundled/format.h
+/home/developer/spdlog/bin/include/spdlog/fmt/bundled/format.h
 algorithm
 -
 cassert
@@ -488,7 +478,7 @@ stdexcept
 stdint.h
 -
 core.h
-/home/pi/spdlog/bin/include/spdlog/fmt/bundled/core.h
+/home/developer/spdlog/bin/include/spdlog/fmt/bundled/core.h
 iterator
 -
 intrin.h
@@ -498,39 +488,39 @@ fmt/format.h
 fmt/format.h
 -
 format-inl.h
-/home/pi/spdlog/bin/include/spdlog/fmt/bundled/format-inl.h
+/home/developer/spdlog/bin/include/spdlog/fmt/bundled/format-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/fmt/fmt.h
+/home/developer/spdlog/bin/include/spdlog/fmt/fmt.h
 bundled/core.h
-/home/pi/spdlog/bin/include/spdlog/fmt/bundled/core.h
+/home/developer/spdlog/bin/include/spdlog/fmt/bundled/core.h
 bundled/format.h
-/home/pi/spdlog/bin/include/spdlog/fmt/bundled/format.h
+/home/developer/spdlog/bin/include/spdlog/fmt/bundled/format.h
 fmt/core.h
-/home/pi/spdlog/bin/include/spdlog/fmt/fmt/core.h
+/home/developer/spdlog/bin/include/spdlog/fmt/fmt/core.h
 fmt/format.h
-/home/pi/spdlog/bin/include/spdlog/fmt/fmt/format.h
+/home/developer/spdlog/bin/include/spdlog/fmt/fmt/format.h
 
-/home/pi/spdlog/bin/include/spdlog/formatter.h
+/home/developer/spdlog/bin/include/spdlog/formatter.h
 fmt/fmt.h
-/home/pi/spdlog/bin/include/spdlog/fmt/fmt.h
+/home/developer/spdlog/bin/include/spdlog/fmt/fmt.h
 spdlog/details/log_msg.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/details/log_msg.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/details/log_msg.h
 
-/home/pi/spdlog/bin/include/spdlog/logger-inl.h
+/home/developer/spdlog/bin/include/spdlog/logger-inl.h
 spdlog/logger.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/logger.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/logger.h
 spdlog/sinks/sink.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/sinks/sink.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/sinks/sink.h
 spdlog/details/pattern_formatter.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/details/pattern_formatter.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/details/pattern_formatter.h
 
-/home/pi/spdlog/bin/include/spdlog/logger.h
+/home/developer/spdlog/bin/include/spdlog/logger.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/common.h
 spdlog/details/log_msg.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/details/log_msg.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/details/log_msg.h
 spdlog/details/os.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/details/os.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/details/os.h
 memory
 -
 string
@@ -540,21 +530,21 @@ vector
 functional
 -
 logger-inl.h
-/home/pi/spdlog/bin/include/spdlog/logger-inl.h
+/home/developer/spdlog/bin/include/spdlog/logger-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/sinks/ansicolor_sink-inl.h
+/home/developer/spdlog/bin/include/spdlog/sinks/ansicolor_sink-inl.h
 spdlog/sinks/ansicolor_sink.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/sinks/ansicolor_sink.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/sinks/ansicolor_sink.h
 spdlog/details/os.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/details/os.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/details/os.h
 
-/home/pi/spdlog/bin/include/spdlog/sinks/ansicolor_sink.h
+/home/developer/spdlog/bin/include/spdlog/sinks/ansicolor_sink.h
 spdlog/details/console_globals.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/details/console_globals.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/details/console_globals.h
 spdlog/details/null_mutex.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/details/null_mutex.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/details/null_mutex.h
 spdlog/sinks/sink.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/sinks/sink.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/sinks/sink.h
 memory
 -
 mutex
@@ -564,39 +554,39 @@ string
 unordered_map
 -
 ansicolor_sink-inl.h
-/home/pi/spdlog/bin/include/spdlog/sinks/ansicolor_sink-inl.h
+/home/developer/spdlog/bin/include/spdlog/sinks/ansicolor_sink-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/sinks/sink-inl.h
+/home/developer/spdlog/bin/include/spdlog/sinks/sink-inl.h
 spdlog/sinks/sink.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/sinks/sink.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/sinks/sink.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/common.h
-
-/home/pi/spdlog/bin/include/spdlog/sinks/sink.h
-spdlog/details/log_msg.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/details/log_msg.h
-spdlog/formatter.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/formatter.h
-sink-inl.h
-/home/pi/spdlog/bin/include/spdlog/sinks/sink-inl.h
-
-/home/pi/spdlog/bin/include/spdlog/sinks/wincolor_sink-inl.h
-spdlog/sinks/wincolor_sink.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/sinks/wincolor_sink.h
-spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/common.h
 spdlog/details/pattern_formatter.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/details/pattern_formatter.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/details/pattern_formatter.h
 
-/home/pi/spdlog/bin/include/spdlog/sinks/wincolor_sink.h
+/home/developer/spdlog/bin/include/spdlog/sinks/sink.h
+spdlog/details/log_msg.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/details/log_msg.h
+spdlog/formatter.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/formatter.h
+sink-inl.h
+/home/developer/spdlog/bin/include/spdlog/sinks/sink-inl.h
+
+/home/developer/spdlog/bin/include/spdlog/sinks/wincolor_sink-inl.h
+spdlog/sinks/wincolor_sink.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/sinks/wincolor_sink.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/common.h
+
+/home/developer/spdlog/bin/include/spdlog/sinks/wincolor_sink.h
+spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/common.h
 spdlog/details/console_globals.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/details/console_globals.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/details/console_globals.h
 spdlog/details/null_mutex.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/details/null_mutex.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/details/null_mutex.h
 spdlog/sinks/sink.h
-/home/pi/spdlog/bin/include/spdlog/sinks/spdlog/sinks/sink.h
+/home/developer/spdlog/bin/include/spdlog/sinks/spdlog/sinks/sink.h
 memory
 -
 mutex
@@ -608,27 +598,27 @@ unordered_map
 wincon.h
 -
 wincolor_sink-inl.h
-/home/pi/spdlog/bin/include/spdlog/sinks/wincolor_sink-inl.h
+/home/developer/spdlog/bin/include/spdlog/sinks/wincolor_sink-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/spdlog-inl.h
+/home/developer/spdlog/bin/include/spdlog/spdlog-inl.h
 spdlog/spdlog.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/spdlog.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/spdlog.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/common.h
 spdlog/details/pattern_formatter.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/details/pattern_formatter.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/details/pattern_formatter.h
 
-/home/pi/spdlog/bin/include/spdlog/spdlog.h
+/home/developer/spdlog/bin/include/spdlog/spdlog.h
 spdlog/common.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/common.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/common.h
 spdlog/details/registry.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/details/registry.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/details/registry.h
 spdlog/logger.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/logger.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/logger.h
 spdlog/version.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/version.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/version.h
 spdlog/details/synchronous_factory.h
-/home/pi/spdlog/bin/include/spdlog/spdlog/details/synchronous_factory.h
+/home/developer/spdlog/bin/include/spdlog/spdlog/details/synchronous_factory.h
 chrono
 -
 functional
@@ -638,9 +628,9 @@ memory
 string
 -
 spdlog-inl.h
-/home/pi/spdlog/bin/include/spdlog/spdlog-inl.h
+/home/developer/spdlog/bin/include/spdlog/spdlog-inl.h
 
-/home/pi/spdlog/bin/include/spdlog/tweakme.h
+/home/developer/spdlog/bin/include/spdlog/tweakme.h
 
-/home/pi/spdlog/bin/include/spdlog/version.h
+/home/developer/spdlog/bin/include/spdlog/version.h
 

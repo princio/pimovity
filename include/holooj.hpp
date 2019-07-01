@@ -53,6 +53,7 @@ typedef struct nnet {
     int im_resized_cols;
     int im_resized_rows;
     int im_resized_size;
+    int im_resized_size_bytes;
     int out_w;
     int out_h;
     int out_z;
@@ -64,6 +65,7 @@ typedef struct nnet {
     int input_size_byte;
     int output_size_byte;
     char *classes_buffer;
+    int classes_buffer_length;
     char **classes;
     float *anchors;
     float *output;
