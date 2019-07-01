@@ -81,9 +81,12 @@ int main (int argc, char** argv) {
 
 	spdlog::set_pattern("*** %^[%S.%f::%5l::%@:%!]%$: %v  ***");
 
+	char graph[100];
+	char meta[100];
 
-    const char *graph = "../data/yolov2/original/yolov2-tiny-original.graph";
-    const char *meta = "../data/yolov2/original/yolov2-tiny-original.meta";
+	strcpy(graph, "../data/yolov2/original/yolov2-tiny-original.graph");
+	strcpy(meta, "../data/yolov2/original/yolov2-tiny-original.meta");
+
     std::string iface = "wlan0";
     unsigned int port = 8000;
 	float thresh = 0.5;
@@ -96,14 +99,21 @@ int main (int argc, char** argv) {
 	auto log_level = spdlog::level::info;
 	if(argc >= 3) {
 		for(int i = 1; i < argc; i++) {
+			if(!strcmp(argv[i], "--ale")) {
+				char *ale = argv[i+1];
+				if(!strcmp(ale, "fe")) {
+					strcpy(graph, "../data/yolov2/ale/yolov2-tiny-ale-fe.graph");
+					strcpy(meta, "../data/yolov2/ale/yolov2-tiny-ale-fe.meta");
+				}
+			}
 			if(!strcmp(argv[i], "--iface")) {
 				iface = argv[i+1];
 			}
 			if(!strcmp(argv[i], "--graph")) {
-				graph = argv[i+1];
+				strcpy(graph, argv[i+1]);
 			}
 			if(!strcmp(argv[i], "--meta")) {
-				meta  = argv[i+1];
+				strcpy(meta, argv[i+1]);
 			}
 			if(!strcmp(argv[i], "--port")) {
 				port  = atoi(argv[i+1]);

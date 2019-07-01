@@ -43,7 +43,7 @@ class NCS {
         ~NCS();
         int initNN();
         int initDevice();
-        int inference_byte(unsigned char *image, int nbboxes_max);
+        int inference_byte(unsigned char *image, int nbboxes_max, bool rgb = false);
         int inference(int nbboxes_max);
         int destroy_movidius();
         int setSizes(int cols_or, int rows_or);

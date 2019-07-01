@@ -165,7 +165,7 @@ int HoloCoo::waitHololens() {
 	memcpy(buf + 8, &ncs->nn.nclasses, 4);
 	ret = send(fd_uy, buf, 12, 0); //REMEMBER ALIGNMENT! char[6] equal to char[8] because of it.
 
-	ret = send(fd_uy, &ncs->nn.classes_buffer, ncs->nn.classes_buffer_length, 0); //REMEMBER ALIGNMENT! char[6] equal to char[8] because of it.
+	ret = send(fd_uy, ncs->nn.classes_buffer, ncs->nn.classes_buffer_length, 0); //REMEMBER ALIGNMENT! char[6] equal to char[8] because of it.
 	REPORTSPD(ret < ncs->nn.classes_buffer_length, "Too few bytes ({} instead of {}).", ncs->nn.classes_buffer_length);
 
 
@@ -362,10 +362,11 @@ int HoloCoo::elaborate_ncs() {
 
 	memcpy(im_bmp, rpacket->image, rpacket->l);
 
-	nbbox = ncs->inference_byte(im_bmp, 3);
+	nbbox = ncs->inference_byte(im_bmp, 3, true);
 
 	SPDLOG_DEBUG("Inference done: found {} nbbox", nbbox);
 
+	spacket.stx = STX;
 	spacket.n = nbbox;
 	send(fd_uy, (byte*) &spacket, sizeof(SendPacket), 0);
 

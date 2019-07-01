@@ -76,6 +76,7 @@ void NY2::correct_region_boxes()
 
     int w = this->nn->im_or_cols;
     int h = this->nn->im_or_rows;
+    SPDLOG_WARN("\nw={}, h={}\nnew_w={}, new_h={}\nnetw={}, neth={}", w, h, new_w, new_h, netw, neth);
     if (((float)netw/w) < ((float)neth/h)) {
         new_w = netw;
         new_h = (h * netw)/w;
@@ -83,19 +84,18 @@ void NY2::correct_region_boxes()
         new_h = neth;
         new_w = (w * neth)/h;
     }
+
+    SPDLOG_WARN("\nw={}, h={}\nnew_w={}, new_h={}", w, h, new_w, new_h);
+
+    float w_factor = ((float)new_w/netw);
+    float h_factor = ((float)new_h/neth);
     float factor = (float) (nn->in_h - nn->im_resized_rows) / nn->in_h / 2;
     for (i = 0; i < this->nn->nbbox_total; ++i){
         Box *b = &this->nn->dets[i].bbox;
-
-        // b->y = b->y - factor;
-        // b->y /= 2*factor;
-        // b->h = b->h;
-
-        b->x =  (b->x - (netw - new_w)/2./netw) / ((float)new_w/netw); 
-        b->y =  (b->y - (neth - new_h)/2./neth) / ((float)new_h/neth); 
-        b->w *= (float)netw/new_w;
-        b->h *= (float)neth/new_h;
-        // this->nn->dets[i].bbox = b;
+        b->x =  (b->x - (netw - new_w)/2./netw) / w_factor; 
+        b->y =  (b->y - (neth - new_h)/2./neth) / h_factor;
+        b->w *=  w_factor;
+        b->h *=  h_factor;
     }
 }
 

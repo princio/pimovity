@@ -298,20 +298,31 @@ int NCS::setSizes(int cols_or, int rows_or) {
 
 }
 
-int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
+int NCS::inference_byte(unsigned char *image, int nbboxes_max, bool rgb) {
     SPDLOG_TRACE("Start.");
 
     int nbbox;
 	int i = 0;
     int l = nn.im_resized_size_bytes - 3;
 	float *y = nn.input_letterbox;
-    int rgb2bgr = 2;
-	while(i <= l) {
-		y[i]     = image[i + 2] / 255.;    // X[i] = imbuffer[i+2] / 255.; ++i;
-		y[i + 1] = image[i + 1] / 255.;    // X[i] = imbuffer[i] / 255.;   ++i;
-		y[i + 2] = image[i] / 255.;        // X[i] = imbuffer[i-2] / 255.; ++i;
-        i += 3;
-	}
+    if(rgb) {
+        while(i <= l) {
+            y[i]  = image[i] / 255.;    // X[i] = imbuffer[i+2] / 255.; ++i;
+            ++i;
+            y[i] = image[i] / 255.;    // X[i] = imbuffer[i] / 255.;   ++i;
+            ++i;
+            y[i] = image[i] / 255.;        // X[i] = imbuffer[i-2] / 255.; ++i;
+            ++i;
+        }
+    }
+    else {
+        while(i <= l) {
+            y[i]     = image[i + 2] / 255.;    // X[i] = imbuffer[i+2] / 255.; ++i;
+            y[i + 1] = image[i + 1] / 255.;    // X[i] = imbuffer[i] / 255.;   ++i;
+            y[i + 2] = image[i] / 255.;        // X[i] = imbuffer[i-2] / 255.; ++i;
+            i += 3;
+    	}
+    }
 
     nbbox = this->inference(nbboxes_max);
     

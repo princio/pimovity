@@ -24,7 +24,6 @@ typedef struct RecvPacket
 typedef struct SendPacket
 {
     int stx;
-    int index;
     int n;
     bbox bboxes[5];
 } SendPacket;
