@@ -16,10 +16,10 @@
 
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+// #include <opencv2/imgcodecs.hpp>
+// #include <opencv2/imgproc.hpp>
+// #include <opencv2/core/core.hpp>
+// #include <opencv2/highgui/highgui.hpp>
 
 #ifdef DEBUG
 #define CHECK(i) if(i < 0 || i > wh) printf("Overflow!");
@@ -82,6 +82,21 @@ int file2bytes2(const char *filename, char **buf, unsigned int *n_bytes) {
  */
 int main (int argc, char** argv) {
 
+	bbox b;
+	b.box.x = 0.482650; b.box.y = 0.527183; b.box.w = 0.175509; b.box.h = 0.401476;
+
+	auto m = cv::imread("/home/developer/Desktop/phs_w_bboxes/im_16.jpg", 1);
+
+
+	SPDLOG_ERROR("{}", m.step);
+	rgb_pixel color;
+	color.g=250;
+	Coordinator::drawBbox((rgb_pixel*) m.data, b.box, color);
+
+    cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
+    cv::imshow( "Display window", m );     
+    cv::waitKey(0);  
+
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	spdlog::set_pattern("*** %^[%S.%f::%5l::%@:%!]%$: %v  ***");
@@ -90,8 +105,9 @@ int main (int argc, char** argv) {
     const char *graph = "../data/yolov2/original/yolov2-tiny-original.graph";
     const char *meta = "../data/yolov2/original/yolov2-tiny-original.meta";
     std::string iface = "wlan0";
-    unsigned int port = 8000;
+    unsigned int port = 8001;
 	float thresh = 0.5;
+	bool only_pi = true;
 
 
 	if(argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
@@ -109,6 +125,9 @@ int main (int argc, char** argv) {
 			}
 			if(!strcmp(argv[i], "--meta")) {
 				meta  = argv[i+1];
+			}
+			if(!strcmp(argv[i], "--only-pi")) {
+				only_pi  = true;
 			}
 			if(!strcmp(argv[i], "--port")) {
 				port  = atoi(argv[i+1]);
@@ -137,7 +156,7 @@ int main (int argc, char** argv) {
 	unsigned int nb;
 	Coordinator coo(iface.c_str(), port);
 
-    coo.init(graph, meta, thresh);
+    coo.init(graph, meta, thresh, only_pi);
 
     coo.run(port);
 
@@ -145,7 +164,6 @@ int main (int argc, char** argv) {
 
 	char *buf;
 
-    coo.init(graph, meta, thresh);
 
 
 	file2bytes2("/home/developer/dog_or.jpg", &buf, &coo.rpacket_buffer_size);

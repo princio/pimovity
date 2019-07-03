@@ -68,6 +68,9 @@ class Coordinator {
         int imcounter = -1;
         float thresh = 0.5;
         const int OH_SIZE = 12;
+
+        bool only_pi = false;
+
         std::vector<uchar> jpeg_buffer;
         cv::Mat mat_raw;
         cv::Mat mat_raw_calibrated;
@@ -119,11 +122,11 @@ class Coordinator {
         int recvImages();
         int elaborate();
         int elaborateImage();
-        int drawBbox(rgb_pixel *im, Box b, rgb_pixel color);
+        static int drawBbox(rgb_pixel *im, Box b, rgb_pixel color);
         int saveImage2Jpeg(byte *im, int index);
         int undistortImage();
         int run(unsigned int);
-        int init(const char *graph, const char *meta, float thresh);
+        int init(const char *graph, const char *meta, float thresh, bool only_pi);
 };
 
 #endif //__COORDINATOR_HPP__

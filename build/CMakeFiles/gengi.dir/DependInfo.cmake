@@ -4,10 +4,10 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/developer/Desktop/pr2/src/coordinator.cpp" "/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir/src/coordinator.cpp.o"
-  "/home/developer/Desktop/pr2/src/main.cpp" "/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir/src/main.cpp.o"
-  "/home/developer/Desktop/pr2/src/ncs.cpp" "/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir/src/ncs.cpp.o"
-  "/home/developer/Desktop/pr2/src/ny2.cpp" "/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir/src/ny2.cpp.o"
+  "/home/developer/pimovity/src/coordinator.cpp" "/home/developer/pimovity/build/CMakeFiles/gengi.dir/src/coordinator.cpp.o"
+  "/home/developer/pimovity/src/main.cpp" "/home/developer/pimovity/build/CMakeFiles/gengi.dir/src/main.cpp.o"
+  "/home/developer/pimovity/src/ncs.cpp" "/home/developer/pimovity/build/CMakeFiles/gengi.dir/src/ncs.cpp.o"
+  "/home/developer/pimovity/src/ny2.cpp" "/home/developer/pimovity/build/CMakeFiles/gengi.dir/src/ny2.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
@@ -18,9 +18,9 @@ set(CMAKE_TARGET_DEFINITIONS_CXX
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
+  "/usr/include/opencv"
   "../include"
   "/home/developer/spdlog/bin/include"
-  "/home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4"
   )
 
 # Targets to which this target links.

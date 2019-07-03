@@ -28,7 +28,6 @@
 #include <stdexcept>
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/imgcodecs.hpp>
 
 #define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
 #define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
@@ -184,8 +183,11 @@ int Coordinator::waitPiAndUy() {
 	char caddr[20];
 	byte buf[12];
 	timeouts = 0;
-	
-	for(int i = 0; i < 2; i++) {
+	int ndev = 2;
+	if(only_pi) {
+		ndev = 1;
+	}
+	for(int i = 0; i < ndev; i++) {
 		fd = accept(fd_server, (struct sockaddr *)&addr, (socklen_t*)&addrlen);
 		inet_ntop(AF_INET, &(addr.sin_addr), caddr, INET_ADDRSTRLEN);
 		REPORTSPD_ERRNO(0 > fd);
@@ -216,21 +218,23 @@ int Coordinator::waitPiAndUy() {
 	}
 
 
-	REPORTSPD(fd_uy == -1, "Unity device not connected.");
 	REPORTSPD(fd_pi == -1, "Pi device not connected.");
 
+	if(!only_pi) {
+		REPORTSPD(fd_uy == -1, "Unity device not connected.");
+		memcpy(buf, &STX, 4);
+		memcpy(buf + 4, &roi.width, 4);
+		memcpy(buf + 8, &roi.height, 4);
+		r = send(fd_uy, buf, 12, 0);
+		if(0 > r) return -1;
 
-	memcpy(buf, &STX, 4);
-	memcpy(buf + 4, &roi.width, 4);
-	memcpy(buf + 8, &roi.height, 4);
-	r = send(fd_uy, buf, 12, 0);
-	if(0 > r) return -1;
+		ufds[1].fd = fd_uy;
+		ufds[1].events = POLLIN | POLLOUT; // check for normal or out-of-band
+	}
 
 	ufds[0].fd = fd_pi;
 	ufds[0].events = POLLIN | POLLOUT; // check for normal or out-of-band
 
-	ufds[1].fd = fd_uy;
-	ufds[1].events = POLLIN | POLLOUT; // check for normal or out-of-band
 
 	SPDLOG_TRACE("End.");
 	return 0;
@@ -302,8 +306,8 @@ int Coordinator::drawBbox(rgb_pixel *im, Box b, rgb_pixel color) {
 		corner_top_left, corner_bot_left, corner_top_right, corner_bot_right,
 		top_left_pixel, bot_left_pixel, box_width_pixel;
 
-    w = ncs->nn.im_or_cols;
-    h = ncs->nn.im_or_rows;
+    w = 1620; //ncs->nn.im_or_cols;
+    h = 1213; //ncs->nn.im_or_rows;
 	wh = w*h;
 
     left_col  = (b.x-b.w/2.)*w;
@@ -423,71 +427,11 @@ int Coordinator::undistortImage() {
 	return 0;
 }
 
-
-int Coordinator::elaborate() {
-	SPDLOG_DEBUG("Start elaborating {} bytes.", rpacket->l);
-	int nbbox;
-	cv::Mat mat_raw;
-	cv::Mat mat_raw_resized;
-
-	printf("##%p\n", (void*) rpacket->image);
-
-	if(!isBMP) {
-		cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
-		mat_raw = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
-		cv::resize(mat_raw, mat_raw_resized, cv::Size(ncs->nn.im_resized_cols, ncs->nn.im_resized_rows));
-		// mat_raw_resized.convertTo(mat_raw_resized, CV_8UC3);
-		// mat_raw_resized.cv
-	}
-	REPORTSPD(mat_raw_resized.total() != ncs->nn.im_resized_size, "Resizing sizes not matching yolov2 input: {} instead of {}.", mat_raw_resized.total(), ncs->nn.im_resized_size);
-
-	//memcpy(ncs_pointer, mat_raw_resized.data, imsize_resized*4);
-	// cv::imshow("nn_input", mat_raw_resized);
-	// cv::waitKey(0);
-	nbbox = ncs->inference_byte(mat_raw_resized.data, 5);
-	SPDLOG_INFO("Found {} bboxes.", nbbox);
-
-
-	for(int i = nbbox-1; i >= 0; --i) {
-    	rgb_pixel color;
-		byte c1 = 250 * i / 3;
-		byte c2 = 250 * i / 3;
-		byte c3 = 250 * i / 3;
-		SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
-			ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
-
-		drawBbox((rgb_pixel*) mat_raw.data, ncs->nn.bboxes[i].box, color);
-	}
-	// cv::Mat mat_nn_input (416, 416, CV_32FC3, ncs->nn.input);
-	// cv::imshow("nn_input", mat_nn_input);
-	// cv::waitKey(0);
-
-	if(nbbox >= 0) {
-		std::stringstream fname;
-		SPDLOG_WARN("Showing image.");
-		fname << "/home/developer/Desktop/pr2/phs/im_" << ++imcounter << ".jpg";
-		cv::imwrite(fname.str(), mat_raw);
-		try {
-			cv::imwrite(fname.str(), mat_raw);
-		}
-		catch (std::runtime_error& ex) {
-			fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
-			return 1;
-		}
-		// cv::imshow("original", mat_raw);
-		// cv::waitKey(0);
-	}
-
-	SPDLOG_DEBUG("Finished elaborating: found {} nbboxes.", nbbox);
-	return nbbox;
-}
-
-
 int Coordinator::elaborateImage() {
-	SPDLOG_DEBUG("Start image elaboration ({} bytes).", rpacket->l);
+	SPDLOG_TRACE("Start image elaboration ({} bytes).", rpacket->l);
 
 
-    SPDLOG_WARN("images={}", counter);
+    SPDLOG_DEBUG("images={}", counter);
 
 	cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
 	mat_raw = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
@@ -495,7 +439,7 @@ int Coordinator::elaborateImage() {
 	mat_raw_cropped = mat_raw_calibrated(roi);
 
 	cv::putText(mat_raw_cropped, std::to_string(counter++), cv::Point(30,30), 
-    		cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,200,250), 1, cv::LINE_AA);
+    		cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,200,250), 1, 4);
 
 
 	cv::imencode(".jpg", mat_raw_cropped, jpeg_buffer);
@@ -539,25 +483,28 @@ int Coordinator::elaborate_ncs() {
 			nbbox = ncs->inference_byte(mat_raw_resized.data, 3);
 			SPDLOG_DEBUG("Inference done.");
 
+			//SPDLOG_WARN("Found {} bboxes.", nbbox);
 
-
+			cv::Mat mat_final = cv::Mat(mat_raw_cropped.rows, mat_raw_cropped.cols, mat_raw_cropped.type(), mat_raw_cropped.data, 4860);
+			SPDLOG_ERROR("{} == {} ?", mat_raw_cropped.step, mat_final.step);
+			++imcounter;
 			for(int i = nbbox-1; i >= 0; --i) {
 				rgb_pixel color;
 				byte c1 = 250 * i / 3;
 				byte c2 = 250 * i / 3;
 				byte c3 = 250 * i / 3;
-				SPDLOG_INFO("\n\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
-					ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
+				SPDLOG_INFO("\n{}:\t({:7.6f}, {:7.6f}, {:7.6f}, {:7.6f}), o={:7.6f}, p={:7.6f}:\t\t{}",
+					imcounter, ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
 
-				drawBbox((rgb_pixel*) mat_raw.data, ncs->nn.bboxes[i].box, color);
+
+				drawBbox((rgb_pixel*) mat_final.data, ncs->nn.bboxes[i].box, color);
 			}
 
 			if(nbbox >= 0) {
 				std::stringstream fname;
-				fname << "/home/developer/Desktop/pr2/phs/im_" << ++imcounter << ".jpg";
-				cv::imwrite(fname.str(), mat_raw);
+				fname << "/home/developer/Desktop/phs_w_bboxes/im_" << imcounter << ".jpg";
 				try {
-					cv::imwrite(fname.str(), mat_raw);
+					cv::imwrite(fname.str(), mat_final);
 				}
 				catch (std::runtime_error& ex) {
 					fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());
@@ -592,7 +539,7 @@ int Coordinator::recvImagesLoop() {
 	while(1) {
 		int nbbox, sl;
 		REPORTSPD_ERRNO(0 > ioctl(fd_pi, FIONREAD, &sl));
-		printf("Bytes available: %d\n", sl);
+		SPDLOG_TRACE("Bytes available: %d\n", sl);
 		
 		if(sl = recvImage()) {
 			if(sl == -2) {
@@ -623,15 +570,15 @@ int Coordinator::recvImagesLoop() {
 
 		if(0 > elaborateImage()) return -1;
 		
+			sl = send(fd_pi, stxs, 8, 0);
 
-		sl = send(fd_pi, stxs, 8, 0);
+		SPDLOG_DEBUG("Jpeg vector size: {}.", jpeg_buffer.size());
 
-		SPDLOG_INFO("Jpeg vector size: {}.", jpeg_buffer.size());
-
-		rpacket->l = jpeg_buffer.size();
-		sl = send(fd_uy, rpacket, 8, 0);
-		sl = send(fd_uy, jpeg_buffer.data(), jpeg_buffer.size(), 0);
-
+		if(!only_pi) {
+			rpacket->l = jpeg_buffer.size();
+			sl = send(fd_uy, rpacket, 8, 0);
+			sl = send(fd_uy, jpeg_buffer.data(), jpeg_buffer.size(), 0);
+		}
 	}
 	
 }
@@ -652,10 +599,12 @@ int Coordinator::recvImages() {
 }
 
 
-int Coordinator::init(const char *graph, const char *meta, float thresh) {
+int Coordinator::init(const char *graph, const char *meta, float thresh, bool only_pi) {
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
 	ncs->initNN();
 	ncs->nn.thresh = thresh;
+
+	this->only_pi = only_pi;
 
 	cv::namedWindow("original", cv::WINDOW_AUTOSIZE );// Create a window for display.
 	cv::namedWindow("nn_input", cv::WINDOW_AUTOSIZE );// Create a window for display.
@@ -669,16 +618,6 @@ int Coordinator::run(unsigned int port) {
 	this->port = port;
 
 	ret = INT32_MAX;
-
-
-
-	
-	// SPDLOG_INFO("Connecting to Pi...");
-	// while(true) {
-	// 	ret = connectToPi();
-	// 	if(ret < 0) usleep(3000*1000);
-	// 	else break;
-	// }
 
 	SPDLOG_INFO("Starting server...");
 	if(startServer()) return -1;
@@ -712,8 +651,10 @@ int Coordinator::closeSockets() {
 	r = close(fd_pi);
 	REPORTSPD(r < 0, "Error during closing Pi socket.");
 
-	r = close(fd_uy);
-	REPORTSPD(r < 0, "Error during closing Unity socket.");
+	if(!only_pi) {
+		r = close(fd_uy);
+		REPORTSPD(r < 0, "Error during closing Unity socket.");
+	}
 
 	r = close(fd_server);
 	REPORTSPD(r < 0, "Error during closing Server socket.");

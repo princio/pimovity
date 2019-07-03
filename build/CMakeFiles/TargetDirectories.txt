@@ -1,3 +1,3 @@
-/home/developer/Desktop/pr2/build/CMakeFiles/rebuild_cache.dir
-/home/developer/Desktop/pr2/build/CMakeFiles/edit_cache.dir
-/home/developer/Desktop/pr2/build/CMakeFiles/gengi.dir
+/home/developer/pimovity/build/CMakeFiles/rebuild_cache.dir
+/home/developer/pimovity/build/CMakeFiles/edit_cache.dir
+/home/developer/pimovity/build/CMakeFiles/gengi.dir

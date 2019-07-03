@@ -290,8 +290,6 @@ int NCS::setSizes(int cols_or, int rows_or) {
 int NCS::inference_byte(unsigned char *image, int nbboxes_max) {
     SPDLOG_TRACE("Start.");
 
-    SPDLOG_WARN("inference={}", inf_counter++);
-
 	int i = 0;
     int l = nn.im_resized_size * 3 - 3;
 	float *y = nn.input_letterbox;
