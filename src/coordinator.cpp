@@ -300,14 +300,15 @@ int Coordinator::saveImage2Jpeg(byte *im, int index) {
 }
 
 
-int Coordinator::drawBbox(rgb_pixel *im, Box b, rgb_pixel color) {
-	int w, h, wh, left_col, right_col, top_row, bot_row,
+int Coordinator::drawBbox(rgb_pixel *im, Box b, rgb_pixel color, int w, int h) {
+	int wh, left_col, right_col, top_row, bot_row,
 		left_overlap, top_overlap, right_overlap, bottom_overlap, thickness, 
 		corner_top_left, corner_bot_left, corner_top_right, corner_bot_right,
 		top_left_pixel, bot_left_pixel, box_width_pixel;
 
-    w = 1620; //ncs->nn.im_or_cols;
-    h = 1213; //ncs->nn.im_or_rows;
+	REPORTSPD(w <= 0, "Width ({}) <= 0.", w);
+	REPORTSPD(h <= 0, "Height ({}) <= 0.", h);
+
 	wh = w*h;
 
     left_col  = (b.x-b.w/2.)*w;
@@ -437,18 +438,19 @@ int Coordinator::elaborateImage() {
 	mat_raw = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
     cv::remap(mat_raw, mat_raw_calibrated, map1, map2, cv::INTER_LINEAR);
 	mat_raw_cropped = mat_raw_calibrated(roi);
+	mat_raw_final = mat_raw_cropped.clone();
 
-	cv::putText(mat_raw_cropped, std::to_string(counter++), cv::Point(30,30), 
+	cv::putText(mat_raw_final, std::to_string(counter++), cv::Point(30,30), 
     		cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(200,200,250), 1, 4);
 
 
-	cv::imencode(".jpg", mat_raw_cropped, jpeg_buffer);
-	cv::imwrite("../phs/im.jpg", mat_raw_cropped);
+	cv::imencode(".jpg", mat_raw_final, jpeg_buffer);
+	cv::imwrite("../phs/im.jpg", mat_raw_final);
 
 	/** only with NCS */
 	int expected = NCS_NOT_DOING;
 	if(inference_atomic.compare_exchange_strong(expected, NCS_NOT_DOING)) {
-		cv::resize(mat_raw_cropped, mat_raw_resized, cv::Size(ncs->nn.im_resized_cols, ncs->nn.im_resized_rows));
+		cv::resize(mat_raw_final, mat_raw_resized, cv::Size(ncs->nn.im_resized_cols, ncs->nn.im_resized_rows));
 		inference_atomic = NCS_TODO;
 		SPDLOG_DEBUG("Atomic: NCS_NOT_DOING -> NCS_TODO.");
 	}
@@ -485,8 +487,6 @@ int Coordinator::elaborate_ncs() {
 
 			//SPDLOG_WARN("Found {} bboxes.", nbbox);
 
-			cv::Mat mat_final = cv::Mat(mat_raw_cropped.rows, mat_raw_cropped.cols, mat_raw_cropped.type(), mat_raw_cropped.data, 4860);
-			SPDLOG_ERROR("{} == {} ?", mat_raw_cropped.step, mat_final.step);
 			++imcounter;
 			for(int i = nbbox-1; i >= 0; --i) {
 				rgb_pixel color;
@@ -497,14 +497,14 @@ int Coordinator::elaborate_ncs() {
 					imcounter, ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
 
 
-				drawBbox((rgb_pixel*) mat_final.data, ncs->nn.bboxes[i].box, color);
+				drawBbox((rgb_pixel*) mat_raw_final.data, ncs->nn.bboxes[i].box, color, ncs->nn.im_or_cols, ncs->nn.im_or_rows);
 			}
 
-			if(nbbox >= 0) {
+			if(nbbox > 0) {
 				std::stringstream fname;
 				fname << "/home/developer/Desktop/phs_w_bboxes/im_" << imcounter << ".jpg";
 				try {
-					cv::imwrite(fname.str(), mat_final);
+					cv::imwrite(fname.str(), mat_raw_final);
 				}
 				catch (std::runtime_error& ex) {
 					fprintf(stderr, "Exception converting image to PNG format: %s\n", ex.what());

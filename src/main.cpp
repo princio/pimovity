@@ -82,20 +82,32 @@ int file2bytes2(const char *filename, char **buf, unsigned int *n_bytes) {
  */
 int main (int argc, char** argv) {
 
-	bbox b;
-	b.box.x = 0.482650; b.box.y = 0.527183; b.box.w = 0.175509; b.box.h = 0.401476;
+	// bbox b;
+	// b.box.x = 0.482650; b.box.y = 0.527183; b.box.w = 0.175509; b.box.h = 0.401476;
 
-	auto m = cv::imread("/home/developer/Desktop/phs_w_bboxes/im_16.jpg", 1);
+	// auto m = cv::imread("/home/developer/Desktop/phs_w_bboxes/im_122.jpg", 1);
 
+	// cv::Rect roi (20, 60, 1000, 800);
+	// auto m_cropped = m(roi);
+	// cv::Mat m_cropped_2 = m_cropped.clone();
 
-	SPDLOG_ERROR("{}", m.step);
-	rgb_pixel color;
-	color.g=250;
-	Coordinator::drawBbox((rgb_pixel*) m.data, b.box, color);
+	// SPDLOG_ERROR("{}", m.step);
+	// SPDLOG_ERROR("{}", m_cropped.step);
+	// m_cropped.step = 1000*3;
+	// SPDLOG_ERROR("{}", m_cropped.step);
+	// SPDLOG_ERROR("{}", m_cropped_2.step);
+	// rgb_pixel color;
+	// color.g=250;
+	// Coordinator::drawBbox((rgb_pixel*) m_cropped.data, b.box, color, 1000, 800);
+	// Coordinator::drawBbox((rgb_pixel*) m_cropped_2.data, b.box, color, 1000, 800);
 
-    cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
-    cv::imshow( "Display window", m );     
-    cv::waitKey(0);  
+    // cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
+    // cv::imshow( "Display window", m );     
+    // cv::waitKey(0);  
+    // cv::imshow( "Display window", m_cropped );
+    // cv::waitKey(0);  
+    // cv::imshow( "Display window", m_cropped_2 );
+    // cv::waitKey(0);  
 
 	setvbuf(stdout, NULL, _IONBF, 0);
 

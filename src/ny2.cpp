@@ -203,10 +203,10 @@ int NY2::get_bboxes(int nbboxes_max)
 
     int nbbox = 0;
     for(int n = 0; n < this->nn->nbbox_total; n++) {
+        detection d = this->nn->dets[n];
         for(int k = 0; k < this->nn->nclasses; k++) {
-            if (this->nn->dets[n].prob[k] > .5) {
-                detection d = this->nn->dets[n];
-
+            // ATTENTION HERE vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+            if (d.prob[k] > .5 && k == 0) { // k == 0 is for person
                 bbox *_bbox = &this->nn->bboxes[nbbox];
 
                 memcpy(&(_bbox->box), &(d.bbox), 16);  //BBOX

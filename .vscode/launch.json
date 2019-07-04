@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "/home/developer/pimovity/debug/gengi",
             "args": [ "--port 8001 --only-pi"],
-            "stopAtEntry": true,
+            "stopAtEntry": false,
             "cwd": "/home/developer/pimovity/debug",
             "environment": [],
             "externalConsole": false,

@@ -34,7 +34,7 @@ typedef enum {
 
 typedef struct detection{
     Box bbox;
-    int classes;
+    //int classes;
     float *prob;
     float objectness;
     int sort_class;

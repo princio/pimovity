@@ -76,6 +76,7 @@ class Coordinator {
         cv::Mat mat_raw_calibrated;
         cv::Mat mat_raw_cropped;
         cv::Mat mat_raw_resized;
+        cv::Mat mat_raw_final;
         cv::Mat cameraMatrix;
         cv::Mat distCoeffs;
         cv::Mat map1;
@@ -122,7 +123,7 @@ class Coordinator {
         int recvImages();
         int elaborate();
         int elaborateImage();
-        static int drawBbox(rgb_pixel *im, Box b, rgb_pixel color);
+        static int drawBbox(rgb_pixel *im, Box b, rgb_pixel color, int w, int h);
         int saveImage2Jpeg(byte *im, int index);
         int undistortImage();
         int run(unsigned int);
