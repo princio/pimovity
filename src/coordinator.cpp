@@ -477,18 +477,16 @@ int Coordinator::recvImage() {
 }
 
 int Coordinator::elaborate_ncs() {
-	int expected, nbbox;
+	int expected;
 	while(1) {
 		expected = NCS_TODO;
 		if(inference_atomic.compare_exchange_strong(expected, NCS_DOING)) {
 			SPDLOG_DEBUG("Atomic: NCS_TODO -> NCS_DOING.");
-			nbbox = ncs->inference_byte(mat_raw_resized.data, 3);
+			nbboxes = ncs->inference_byte(mat_raw_resized.data, 1);
 			SPDLOG_DEBUG("Inference done.");
 
-			//SPDLOG_WARN("Found {} bboxes.", nbbox);
-
 			++imcounter;
-			for(int i = nbbox-1; i >= 0; --i) {
+			for(int i = nbboxes-1; i >= 0; --i) {
 				rgb_pixel color;
 				byte c1 = 250 * i / 3;
 				byte c2 = 250 * i / 3;
@@ -500,7 +498,7 @@ int Coordinator::elaborate_ncs() {
 				drawBbox((rgb_pixel*) mat_raw_final.data, ncs->nn.bboxes[i].box, color, ncs->nn.im_or_cols, ncs->nn.im_or_rows);
 			}
 
-			if(nbbox > 0) {
+			if(nbboxes > 0) {
 				std::stringstream fname;
 				fname << "/home/developer/Desktop/phs_w_bboxes/im_" << imcounter << ".jpg";
 				try {
@@ -526,9 +524,24 @@ int Coordinator::recvImagesLoop() {
 	int consecutive_wrong_packets = 0;
 	int stxs[2] = { STX, STX };
 	rpacket = (RecvPacket *) calloc(sizeof(RecvPacket) + rpacket_buffer_size, 1);
+	rpacket->type = 0;
+
 	memset(&spacket, 0, sizeof(SendPacket));
-	spacket.stx = STX;
-	ncs->nn.bboxes = spacket.bboxes;
+	spacket.stx = 27692;
+	spacket.l = sizeof(spacket.bboxes);
+	spacket.type = 1;
+	if(disable_ncs) {
+		spacket.bboxes.box.x = 0.5;
+		spacket.bboxes.box.y = 0.6;
+		spacket.bboxes.box.w = 0.7;
+		spacket.bboxes.box.h = 0.8;
+		spacket.bboxes.objectness = 0.1;
+		spacket.bboxes.prob = 0.2;
+		spacket.bboxes.cindex = 21;
+	}
+
+
+	ncs->nn.bboxes = &spacket.bboxes;
 	
 
 	if (0 > send(fd_pi, stxs, 8, 0)) return -1;
@@ -537,9 +550,9 @@ int Coordinator::recvImagesLoop() {
 	inference_atomic = NCS_NOT_DOING;
 
 	while(1) {
-		int nbbox, sl;
+		int sl;
 		REPORTSPD_ERRNO(0 > ioctl(fd_pi, FIONREAD, &sl));
-		SPDLOG_TRACE("Bytes available: %d\n", sl);
+		SPDLOG_TRACE("Bytes available: {}\n", sl);
 		
 		if(sl = recvImage()) {
 			if(sl == -2) {
@@ -560,25 +573,36 @@ int Coordinator::recvImagesLoop() {
 		}
 		consecutive_wrong_packets = 0;
 
-		//sl = send(fd_uy, rpacket, rpacket->l + 8, 0);
+
+		if(0 > elaborateImage()) return -1;
+		sl = send(fd_pi, stxs, 8, 0);
+		if(!only_pi) {
+			rpacket->stx = 27692;
+			rpacket->l = jpeg_buffer.size();
+			rpacket->type = 0;
+			sl = send(fd_uy, rpacket, 12, 0);
+			sl = send(fd_uy, jpeg_buffer.data(), jpeg_buffer.size(), 0);
+		}
+
+		spacket.type = 1;
 		int expected = NCS_DONE;
+		if(disable_ncs) {
+			sl = send(fd_uy, &spacket, sizeof(SendPacket), 0);
+			SPDLOG_ERROR("Sent {} bytes to unity as bboxes.", sl);
+		} else
 		if(inference_atomic.compare_exchange_weak(expected, NCS_DONE)) {
 			//sl = send(fd_uy, (void*) &spacket, sizeof(SendPacket), 0);
+			if(nbboxes > 0) {
+				sl = send(fd_uy, &spacket, sizeof(SendPacket), 0);
+				SPDLOG_ERROR("Sent {} bytes to unity as bboxes.", sl);
+			}
 			inference_atomic = NCS_NOT_DOING;
 			SPDLOG_DEBUG("Atomic: NCS_DONE -> NCS_NOT_DOING.");
 		}
-
-		if(0 > elaborateImage()) return -1;
 		
-			sl = send(fd_pi, stxs, 8, 0);
 
 		SPDLOG_DEBUG("Jpeg vector size: {}.", jpeg_buffer.size());
 
-		if(!only_pi) {
-			rpacket->l = jpeg_buffer.size();
-			sl = send(fd_uy, rpacket, 8, 0);
-			sl = send(fd_uy, jpeg_buffer.data(), jpeg_buffer.size(), 0);
-		}
 	}
 	
 }
@@ -586,10 +610,11 @@ int Coordinator::recvImagesLoop() {
 int Coordinator::recvImages() {
 	SPDLOG_TRACE("Start.");
 	auto images_loop = new std::thread(&Coordinator::recvImagesLoop, this);
-	inference_thread = new std::thread(&Coordinator::elaborate_ncs, this);
+	if(!disable_ncs) {
+		inference_thread = new std::thread(&Coordinator::elaborate_ncs, this);
+		inference_thread->join();
+	}
 
-
-	inference_thread->join();
 	images_loop->join();
 
 	free(rpacket);
@@ -599,16 +624,14 @@ int Coordinator::recvImages() {
 }
 
 
-int Coordinator::init(const char *graph, const char *meta, float thresh, bool only_pi) {
+int Coordinator::init(const char *graph, const char *meta, float thresh, bool only_pi, bool disable_ncs) {
+
+	this->only_pi = only_pi;
+	this->disable_ncs = disable_ncs;
+
 	ncs = new NCS(graph, meta, NCSNN_YOLOv2);
 	ncs->initNN();
 	ncs->nn.thresh = thresh;
-
-	this->only_pi = only_pi;
-
-	cv::namedWindow("original", cv::WINDOW_AUTOSIZE );// Create a window for display.
-	cv::namedWindow("nn_input", cv::WINDOW_AUTOSIZE );// Create a window for display.
-
 }
 
 
@@ -625,7 +648,7 @@ int Coordinator::run(unsigned int port) {
 	ret = waitPiAndUy();
 	if(ret < 0) return -1;
 
-	if(ncs->initDevice()) exit(1);
+	if(disable_ncs == false && ncs->initDevice()) exit(1);
 
 	ret = recvImages();
 	if(ret < 0) {

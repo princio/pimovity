@@ -119,7 +119,8 @@ int main (int argc, char** argv) {
     std::string iface = "wlan0";
     unsigned int port = 8001;
 	float thresh = 0.5;
-	bool only_pi = true;
+	bool only_pi = false;
+	bool disable_ncs = false;
 
 
 	if(argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
@@ -140,6 +141,9 @@ int main (int argc, char** argv) {
 			}
 			if(!strcmp(argv[i], "--only-pi")) {
 				only_pi  = true;
+			}
+			if(!strcmp(argv[i], "--disable-ncs")) {
+				disable_ncs  = true;
 			}
 			if(!strcmp(argv[i], "--port")) {
 				port  = atoi(argv[i+1]);
@@ -168,7 +172,7 @@ int main (int argc, char** argv) {
 	unsigned int nb;
 	Coordinator coo(iface.c_str(), port);
 
-    coo.init(graph, meta, thresh, only_pi);
+    coo.init(graph, meta, thresh, only_pi, disable_ncs);
 
     coo.run(port);
 

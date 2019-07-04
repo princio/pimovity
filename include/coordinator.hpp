@@ -50,15 +50,18 @@ typedef struct RecvPacket
 {
     int stx;
     int l;
+    int type;
     byte image[];
 } RecvPacket;
 
 typedef struct SendPacket
 {
     int stx;
-    int index;
-    int n;
-    bbox bboxes[5];
+    int l;
+    int type;
+    //int index;
+    // int n;
+    bbox bboxes;
 } SendPacket;
 
 class Coordinator {
@@ -68,8 +71,10 @@ class Coordinator {
         int imcounter = -1;
         float thresh = 0.5;
         const int OH_SIZE = 12;
+        int nbboxes = 0;
 
         bool only_pi = false;
+        bool disable_ncs = false;
 
         std::vector<uchar> jpeg_buffer;
         cv::Mat mat_raw;
@@ -127,7 +132,7 @@ class Coordinator {
         int saveImage2Jpeg(byte *im, int index);
         int undistortImage();
         int run(unsigned int);
-        int init(const char *graph, const char *meta, float thresh, bool only_pi);
+        int init(const char *graph, const char *meta, float thresh, bool only_pi, bool disable_ncs);
 };
 
 #endif //__COORDINATOR_HPP__
