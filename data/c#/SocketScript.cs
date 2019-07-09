@@ -13,6 +13,10 @@ using HoloToolkit.Unity.SpatialMapping;
 using HoloToolkit.Unity.InputModule;
 using HoloToolkit.Unity;
 using UnityEngine.XR.WSA.Input;
+using HoloToolkit.Examples.InteractiveElements;
+using Windows.Media.Effects;
+using Windows.Foundation.Collections;
+using Windows.Media;
 
 #if NETFX_CORE
 using Stopwatch = System.Diagnostics.Stopwatch;
@@ -33,7 +37,13 @@ public class SocketScript : MonoBehaviour
     public GameObject label;
     public GameObject button1;
     public GameObject button2;
+    public GameObject btn_show_menu;
+    public GameObject menu;
     public GameObject statusText;
+    public GameObject IpPortDigits;
+    private TextMesh[] textmesh_digits;
+    private int digit_index = 0;
+
     public string ip = "192.168.1.141";
     public int port = 56789;
     private TextMesh labelTM;
@@ -46,7 +56,7 @@ public class SocketScript : MonoBehaviour
 
 
 #if NETFX_CORE
-    private const int OVERHEAD_SIZE = 8; // STX:4,TYPE:1,INDEX:4,LENGTH:4,BUFFER:x,EXT:4
+    private const int OVERHEAD_SIZE = 12; // STX:4,TYPE:1,INDEX:4,LENGTH:4,BUFFER:x,EXT:4
     private const int STX = 27692;//767590; //2,7,0,6,1,9,9,2=10,111,0,110,1,1001,1001,10=101110110110011001, int signed little order
     private const int ETX = 170807; //24121953
     private static byte[] STXb = BitConverter.GetBytes(STX);
@@ -79,6 +89,7 @@ public class SocketScript : MonoBehaviour
     private float distance;
     private int capturePhoto;
     private int processing;
+    private bool isProcessing;
     private CTEnum im_transform = CTEnum.SCALED;
 
     private int im_original_cols = 0;
@@ -89,6 +100,26 @@ public class SocketScript : MonoBehaviour
     private int im_resized_size = 0;
     private int im_resized_size_bytes = 0;
     private TextMesh st;
+    private SocketAsyncEventArgs send_sae;
+    private bool isConnectStart;
+    private SocketStatus socketStatus;
+    private MediaCapture mediaCapture;
+    private int processingStreaming;
+    private int processingNN;
+    private int requestNN;
+
+    public IVideoEffectDefinition videoEffect { get; private set; }
+
+    private IMediaExtension videoEffectPreview;
+    private IMediaExtension videoEffectRecord;
+
+    enum SocketStatus
+    {
+        TRY,
+        CONNECTED,
+        NONE
+    }
+
 #endif
 
     /*
@@ -99,14 +130,193 @@ public class SocketScript : MonoBehaviour
     */
 
 
-    public async void ButtonConnectDown()
+    public void ButtonMenuDown()
     {
-        Debug.Log("connect down.");
-        line3 = "connect button down.";
+        var label = btn_show_menu.GetComponent<LabelTheme>();
+        if (menu.activeSelf == false) {
+            label.Default = "Hide Menu";
+            menu.SetActive(true);
+            menu.transform.position = CameraCache.Main.transform.position + CameraCache.Main.transform.forward * 2 + new Vector3(0.1f, 0, 0);
+            menu.transform.forward = CameraCache.Main.transform.forward;
+        } else {
+            label.Default = "Show Menu";
+            menu.SetActive(false);
+        }
+
+        Debug.Log($"ButtonMenuDown.");
+        line3 = $"ButtonMenuDown.";
+    }
+
+    private void DisposeSocket()
+    {
+        try {
+            socket.Shutdown(SocketShutdown.Both);
+        }
+        catch { }
+        try {
+            socket.Dispose();
+        }
+        catch { }
+        socket = null;
+
+        socketStatus = SocketStatus.NONE;
+        Button1UpdateString($"Connect to\n{ip}:{port}");
+    }
+
+    public void ButtonConnectDown()
+    {
 
 #if NETFX_CORE
-        await StartSocket();
+        string b_str = "";
+        ///*await*/ StartSocket();
+        switch(socketStatus) {
+            case SocketStatus.NONE:
+                socketStatus = SocketStatus.TRY;
+                StartCoroutine("CoroutineStartSocket");
+                b_str = $"STOP\n(trying to {ip}:{port})";
+                break;
+            case SocketStatus.TRY:
+                socketStatus = SocketStatus.NONE;
+                StopCoroutine("CoroutineStartSocket");
+                socket = null;
+                b_str = $"Connect to\n{ip}:{port}";
+                break;
+            case SocketStatus.CONNECTED:
+                socketStatus = SocketStatus.NONE;
+                socket.Shutdown(SocketShutdown.Both);
+                socket = null;
+                b_str = $"Connect to\n{ip}:{port}";
+                break;
+        }
+
+        Button1UpdateString(b_str);
 #endif
+
+        Debug.Log($"connect down: {ip}:{port}");
+        line3 = $"connect button down: {ip}:{port}";
+    }
+
+    private void Button1UpdateString(string s)
+    {
+        button1.GetComponent<LabelTheme>().Default = s;
+        button1.transform.GetChild(1).GetChild(1).GetComponent<TextMesh>().text = s;
+    }
+
+    public void ButtonIpLeftDown()
+    {
+        textmesh_digits[digit_index].color = Color.white;
+        digit_index = --digit_index == -1 ? 16 : digit_index;
+        textmesh_digits[digit_index].color = Color.red;
+        Debug.Log("ButtonIpLeftDown.");
+        line3 = "ButtonIpLeftDown.";
+    }
+
+    public void ButtonIpRightDown()
+    {
+        textmesh_digits[digit_index].color = Color.white;
+        digit_index = ++digit_index > 16 ? 0 : digit_index;
+        textmesh_digits[digit_index].color = Color.red;
+        Debug.Log("ButtonIpRightDown.");
+        line3 = "ButtonIpRightDown.";
+    }
+
+    string GetDigit(int idx)
+    {
+        return textmesh_digits[idx].text;
+    }
+
+    int DigitgetMax(bool plus = true)
+    {
+        int max = 9;
+        if (digit_index < 12) {
+            int digit_group_start = digit_index / 3 * 3;
+            if (digit_index % 3 == 0) max = 2;
+            else
+            if (GetDigit(digit_group_start) == "2") {
+                if (digit_index % 3 == 1) max = 5;
+                else
+                if (digit_index % 3 == 2 && GetDigit(digit_group_start + 1) == "5") max = 5;
+            }
+        }
+        return max;
+    }
+
+    void TextMesh2Ip()
+    {
+        IPAddress ipa;
+        string __ip = "";
+        for (int i = 0; i < 12; i+=3) {
+            int isubip = int.Parse(textmesh_digits[i].text + textmesh_digits[i + 1].text + textmesh_digits[i + 2].text);
+            __ip += isubip.ToString() + ".";
+        }
+        __ip = __ip.Substring(0, __ip.Length - 1);
+
+        if(IPAddress.TryParse(__ip, out ipa) == false) {
+            line1 = $"Wrong ip address: {__ip}.";
+            return;
+        }
+        line1 = "Correct ip address.";
+        ip = __ip;
+
+        var sport = "";
+        for (int i = 12; i <= 16; i++) {
+            sport += textmesh_digits[i].text;
+        }
+        if (int.TryParse(sport, out int _port) == false) {
+            line1 = $"Wrong port: {port}.";
+            return;
+        }
+
+        port = _port;
+
+        button1.GetComponent<LabelTheme>().Default = $"Connect to\n{ip}:{port}";
+        button1.transform.GetChild(1).GetChild(1).GetComponent<TextMesh>().text = $"Connect to\n{ip}:{port}";
+    }
+
+    void Ip2TextMesh()
+    {
+        string ip_digits = "";
+        foreach(var subip in ip.Split('.')) {
+            ip_digits += new String('0', 3 - subip.Length) + subip;
+        }
+        Debug.Log("###########\t" + ip_digits);
+        for (int i = 0; i < ip_digits.Length; i++) {
+            textmesh_digits[i].text = ip_digits[i].ToString();
+        }
+
+        var sport = port.ToString();
+        for (int i = 0; i < sport.Length; i++) {
+            textmesh_digits[i + 12].text = sport[i].ToString();
+        }
+    }
+
+    public void ButtonIpPlusDown()
+    {
+        int max = DigitgetMax();
+
+        int n = Int32.Parse(textmesh_digits[digit_index].text);
+        n = ++n > max ? 0 : n;
+        textmesh_digits[digit_index].text = n.ToString();
+
+        TextMesh2Ip();
+
+        Debug.Log("ButtonIpPlusDown.");
+        line3 = "ButtonIpPlusDown.";
+    }
+
+    public void ButtonIpMinusDown()
+    {
+        int max = DigitgetMax(false);
+
+        int n = Int32.Parse(textmesh_digits[digit_index].text);
+        n = --n < 0 ? max : n;
+        textmesh_digits[digit_index].text = n.ToString();
+
+        TextMesh2Ip();
+
+
+        Debug.Log("ButtonIpMinusDown.");
+        line3 = "ButtonIpMinusDown.";
     }
 
 
@@ -138,22 +348,10 @@ public class SocketScript : MonoBehaviour
         st.text = line1 + "\n" + line2 + "\n" + line3;
     }
 
-    async void readIpFromFile()
-    {
-        try {
-            var lib = await StorageLibrary.GetLibraryAsync(KnownLibraryId.Pictures);
-            var file = await lib.SaveFolder.GetFileAsync("ip.txt");
-            ip = await FileIO.ReadTextAsync(file);
-
-            Debug.Log($"IP is: {ip}.");
-        }
-        catch (Exception e) {
-            Debug.Log($"IP unretrievable: {e}");
-        }
-    }
-
     async void Start()
     {
+        socketStatus = SocketStatus.NONE;
+
         st = statusText.GetComponent<TextMesh>();
         statusText.transform.parent.transform.position += new Vector3(-1, 1, 0);
 
@@ -161,6 +359,17 @@ public class SocketScript : MonoBehaviour
         line2 = "#";
         line3 = "#";
         UpdateStatus();
+
+        textmesh_digits = new TextMesh[IpPortDigits.transform.childCount];
+        string names = "";
+        for (int i = 0; i < IpPortDigits.transform.childCount; i++) {
+            textmesh_digits[i] = IpPortDigits.transform.GetChild(i).GetComponent<TextMesh>();
+            names += textmesh_digits[i].name + ",";
+        }
+        Debug.Log(names);
+        textmesh_digits[0].color = Color.red;
+        button1.GetComponent<LabelTheme>().Default = $"Connect to\n{ip}:{port}";
+        button1.transform.GetChild(1).GetChild(1).GetComponent<TextMesh>().text = $"Connect to\n{ip}:{port}";
 
 
         framerate = 5;
@@ -176,63 +385,44 @@ public class SocketScript : MonoBehaviour
         startProcessing = 0;
         rbuffer = new byte[256];
 
+        Ip2TextMesh();
 
-        line2 = "starting capturer...";
+        processing = NOT_READY;
+
         await StartCapturer();
 
-        /*await StartSocket();
-        startProcessing = 0;
-        await frameReader.StartAsync();
-        Debug.Log("Socket and FrameReader started!!!");*/
-
+        //mediaCapture = new MediaCapture();
+        //await mediaCapture.InitializeAsync();
+        //mediaCapture.Failed += MediaCapture_Failed;
 
         line1 = "start completed.";
     }
 
-    async void Update()
+    private void MediaCapture_Failed(MediaCapture sender, MediaCaptureFailedEventArgs errorEventArgs)
+    {
+        throw new NotImplementedException();
+    }
+
+    void Update()
     {
         UpdateStatus();
-        try {
-            if(socket != null) {
-                if (socket.Connected == false) {
-                    socket.Dispose();
-                    await StartSocket();
-                }
-                if (startProcessing == 1 && 0 == Interlocked.CompareExchange(ref processing, 1, 0)) {
-                    processing = 1;
-                    StartCoroutine("MyCoroutine");
-                }
-            }
-        }
-        catch (Exception e) {
-            Debug.Log($"Something wrong in update: {e}");
+
+        if (TO_ELABORATE == Interlocked.CompareExchange(ref processing, ELABORATING, TO_ELABORATE)) {
+            StartCoroutine("CoroutineAll", requestNN == 1);
         }
     }
 
-    private void TapHandler(TappedEventArgs obj)
+    private void InitBBox()
     {
-        if (obj.tapCount != 2) return;
-
-        if (line3 == "." || line3 == "..") line3 += ".";
-        else line3 = ".";
-        UpdateStatus();
-
-        if (1 == Interlocked.CompareExchange(ref capturePhoto, 1, 0)) {
-            return;
-        }
-
         hitPosition = GazeManager.Instance.HitPosition;
         cameraMain = CameraCache.Main;//GazeManager.Instance.HitNormal;
 
-        photoBBox = Instantiate(bbox, hitPosition, Quaternion.identity) as GameObject;
-
         distance = Vector3.Distance(hitPosition, cameraMain.transform.position);
-
-        photoBBox.transform.localScale = 0.6f * photoBBox.transform.localScale.Mul(new Vector3(distance, distance, distance));
+        photoBBox = Instantiate(bbox, hitPosition, Quaternion.identity) as GameObject;
+        photoBBox.transform.localScale = 0.2f * photoBBox.transform.localScale.Mul(new Vector3(distance, distance, distance));
         photoBBox.transform.position = hitPosition;
         photoBBox.transform.forward = cameraMain.transform.forward;
         photoBBox.transform.Rotate(-photoBBox.transform.eulerAngles.x, 0, -photoBBox.transform.eulerAngles.z);
-
         quad = photoBBox.transform.Find("Quad").gameObject;
         quadRenderer = quad.GetComponent<Renderer>() as Renderer;
         label = photoBBox.transform.Find("Label").gameObject;
@@ -240,118 +430,166 @@ public class SocketScript : MonoBehaviour
         labelTM.text = "trying...";
     }
 
+    private void TapHandler(TappedEventArgs obj)
+    {
+        Interlocked.CompareExchange(ref requestNN, 1, 0);
+    }
+
+    const int NOT_READY =     0;
+    const int WAIT_FRAME =    1;
+    const int SAVE_FRAME =    2;
+    const int TO_ELABORATE =  3;
+    const int ELABORATING =   4;
+
     private void OnFrameArrived(MediaFrameReader sender, MediaFrameArrivedEventArgs args)
     {
-        if (line2 == "." || line2 == "..") line2 += ".";
-        else line2 = ".";
-        UpdateStatus();
-
-        if (0 == capturePhoto) {
-            return;
-        }
-
-        try {
-            using (var frame = sender.TryAcquireLatestFrame()) {
-                if (frame != null && frame.VideoMediaFrame != null) {
-                    sbmp = frame.VideoMediaFrame.SoftwareBitmap;// SoftwareBitmap.Convert(frame.VideoMediaFrame.SoftwareBitmap, BitmapPixelFormat.Bgra8, BitmapAlphaMode.Ignore);
-                    Interlocked.Exchange(ref startProcessing, 1);
+        line3 = "new frame";
+        if (WAIT_FRAME == Interlocked.CompareExchange(ref processing, SAVE_FRAME, WAIT_FRAME)) {
+            try {
+                using (var frame = sender.TryAcquireLatestFrame()) {
+                    if (frame != null && frame.VideoMediaFrame != null) {
+                        sbmp = frame.VideoMediaFrame.SoftwareBitmap;
+                        Interlocked.Exchange(ref processing, TO_ELABORATE);
+                    }
                 }
             }
-        }
-        catch (Exception e) {
-            Debug.Log("OnFramerArrived: " + e);
+            catch (Exception e) {
+                Debug.Log("OnFramerArrived: " + e);
+            }
         }
     }
 
-    IEnumerator MyCoroutine()
+    IEnumerator CoroutineEncode(bool isNN)
     {
-        bool isAsync;
+        inMemStream = new InMemoryRandomAccessStream();
+        var task1 = BitmapEncoder.CreateAsync(isNN ? BitmapEncoder.BmpEncoderId : BitmapEncoder.JpegEncoderId, inMemStream);
+
+        while (task1.Status == AsyncStatus.Started) {
+            yield return new WaitForEndOfFrame();
+        }
+        if (task1.Status != AsyncStatus.Completed) {
+            encoder = null;
+            line3 = $"Failed to create encoder: {task1.ErrorCode}.";
+            yield break;
+        }
+
+        encoder = task1.GetResults();
+
+        if(isNN) {
+            PrepareEncoderNN();
+        } else {
+            encoder.SetSoftwareBitmap(sbmp);
+        }
+
+        var task2 = encoder.FlushAsync();
+        while (task2.Status == AsyncStatus.Started) {
+            yield return new WaitForEndOfFrame();
+        }
+        if (task1.Status != AsyncStatus.Completed) {
+            inMemStream = null;
+        }
+    }
+
+    IEnumerator CoroutineAll(bool isNN)
+    {
         int size;
 
-        Code();
+        if(isNN) {
+            line3 = "NN coding...";
+            Interlocked.Exchange(ref requestNN, 0);
+            InitBBox();
+        } else {
+            line3 = "Photo coding...";
+        }
 
-        Interlocked.Exchange(ref isEncoding, 1);
-        var task = encoder.FlushAsync();
-        task.Completed += new AsyncActionCompletedHandler((IAsyncAction source, AsyncStatus status) => {
-            Interlocked.Exchange(ref isEncoding, 0);
-        });
-        do {
-            yield return null;
-        } while (1 == Interlocked.CompareExchange(ref isEncoding, 0, 0));
-        sbmp = null;
+        yield return StartCoroutine("CoroutineEncode", isNN);
 
-        yield return null;
+        size = PreparePacket(isNN);
 
-        size = PreparePacket();
+        if (!isNN) {
 
-        yield return null;
+        }
 
-    #region sending
+        yield return StartCoroutine("CoroutineSending", size);
+
+        if(isNN) {
+            yield return StartCoroutine("CoroutineReceiving");
+        }
+
+        Interlocked.Exchange(ref processing, WAIT_FRAME);
+    }
+
+    IEnumerator CoroutineSending(int size)
+    {
+        bool isAsync;
         int sent;
-        using (var send_sae = new SocketAsyncEventArgs()) {
 
-            isAsync = false;
+        using (var send_sae = new SocketAsyncEventArgs()) {
             try {
                 send_sae.Completed += transfer_callback;
-                try {
-                    send_sae.SetBuffer(buffer, 0, size);
-                }
-                catch {
-                    Debug.Log("Error in SSetBuffer: 205.");
-                }
-                Interlocked.Exchange(ref socketIsBusy, 1);
-                isAsync = socket.SendAsync(send_sae);
+                send_sae.SetBuffer(buffer, 0, size);
             }
             catch (SocketException e) {
                 Debug.LogFormat("Receiving timeout." + e.SocketErrorCode.ToString());
                 yield break;
             }
-            do {
-                yield return null;
-            } while (1 == Interlocked.CompareExchange(ref socketIsBusy, 0, 0));
-            if (!isAsync) yield break;
-
-            if (send_sae_error != SocketError.Success) {
-                Debug.Log("Socket::Send: error = " + send_sae_error);
+            catch {
+                Debug.Log("Error in SSetBuffer: 205.");
                 yield break;
             }
+
+            socketIsBusy = 1;
+            isAsync = socket.SendAsync(send_sae);
+
+            if (!isAsync) {
+                while (socketIsBusy == 1) {
+                    yield return new WaitForEndOfFrame();
+                }
+            }
+
+
+            if (send_sae.SocketError != SocketError.Success) {
+                Debug.Log("Socket::Send: error = " + send_sae.SocketError);
+                yield break;
+            }
+
             sent = send_sae.BytesTransferred;
         }
+
         if (sent < size) {
-            Debug.LogFormat("Error not sent {0} bytes", size - sent);
+            Debug.LogFormat("Error after sending [{0} > {1}]: \"{2}\"", size, sent, send_sae.SocketError);
             yield break;
         }
         inMemStream.Dispose();
-    #endregion
 
-    #region receiving
-        isAsync = false;
+        line3 = "Photo sent...";
+    }
+
+    IEnumerator CoroutineReceiving()
+    {
+        bool isAsync = false;
         try {
-            Interlocked.Exchange(ref socketIsBusy, 1);
+            socketIsBusy = 1;
             isAsync = socket.ReceiveAsync(recv_sae);
         }
         catch (Exception e) {
             Debug.Log(e.Message);
-        }
-        do {
-            yield return null;
-        } while (1 == Interlocked.CompareExchange(ref socketIsBusy, 0, 0));
-        if (!isAsync) yield break;
-        if (recv_sae_error != SocketError.Success) {
-            Debug.Log("Socket::Send: error = " + recv_sae_error);
             yield break;
         }
-    #endregion
+        if (!isAsync) {
+            while (socketIsBusy == 1) {
+                yield return new WaitForEndOfFrame();
+            }
+        }
+        if (recv_sae.SocketError != SocketError.Success) {
+            Debug.Log("Socket::Send: error = " + recv_sae.SocketError);
+            yield break;
+        }
+        line3 = "Recv response.";
 
         HandleBBox(recv_sae.BytesTransferred);
 
         ++photoIndex;
-
-        Interlocked.Exchange(ref capturePhoto, 0);
-        Interlocked.Exchange(ref startProcessing, 0);
-        Interlocked.Exchange(ref processing, 0);
-
-        yield return null;
     }
 
     private void HandleBBox(int rl)
@@ -379,6 +617,8 @@ public class SocketScript : MonoBehaviour
             }
             else
             if (nbbox > 0) {
+                line1 = "";
+                float _x = 0, _y = 0, _w = 0, _h = 0, _o = 0, _p = 0; int _cindex = 0;
                 for (int nb = 0; nb < nbbox; ++nb) {
                     float x = breader.ReadSingle(); //is the x coordinate of the bbox center
                     float y = breader.ReadSingle(); //is the y coordinate of the bbox center
@@ -388,19 +628,29 @@ public class SocketScript : MonoBehaviour
                     float p = breader.ReadSingle();
                     int cindex = breader.ReadInt32();
 
-                    Debug.LogFormat("[{0,5}:{1}]:\tx={2,6:F4}, y={3,6:F4}, w={4,6:F4}, h={5,6:F4}, o={6,6:F4}, p={7,6:F4}, name#{8,2}=" + categories[cindex] + ".", photoIndex, nb, x, y, w, h, o, p, cindex);
+                    if(p > _p) {
+                        _x = x;
+                        _y = y;
+                        _w = w;
+                        _h = h;
+                        _p = p;
+                        _cindex = cindex;
+                    }
 
-                    GenBBox(w, h, x, y, p, cindex);
+                    Debug.LogFormat("[{0,5}:{1}]:\tx={2,6:F4}, y={3,6:F4}, w={4,6:F4}, h={5,6:F4}, o={6,6:F4}, p={7,6:F4}, name#{8,2}=" + categories[cindex] + ".", photoIndex, nb, x, y, w, h, o, p, cindex);
+                    line1 += categories[cindex] + ",";
                 }
+
+                GenBBox(_w, _h, _x, _y, _p, _cindex);
             }
             else
             if (nbbox == 0) {
-                Destroy(photoBBox);
+                line1 = "No bbox found.";
                 Debug.Log("[{0:5}] No bbox found.");
             }
             else {
+                line1 = "Error during inference.";
                 Debug.LogFormat("[{0:5}]: error during inference.", photoIndex);
-                //iros.Remove(index);
             }
         }
         catch {
@@ -445,21 +695,169 @@ public class SocketScript : MonoBehaviour
         label.text = categories[cindex] + $"[{Math.Ceiling(p * 100f)}%]";
     }
 
-    private int PreparePacket()
+    private int PreparePacket(bool isNN)
     {
         Stream stream;
-        int size = (int)inMemStream.Size - 54;
+        int size;
+
+        size = (int)inMemStream.Size - (isNN ? 54 : 0);
 
         stream = inMemStream.AsStreamForRead();
-        stream.Seek(54, SeekOrigin.Begin);
+        stream.Seek(isNN ? 54 : 0, SeekOrigin.Begin);
 
-        int read_size = stream.Read(buffer, 8, size);
+        int read_size = stream.Read(buffer, OVERHEAD_SIZE, size);
         if (size != read_size) { throw new Exception(string.Format("Reading error: read {0} on {1}.", read_size, size)); }
 
-        Array.Copy(BitConverter.GetBytes(STX), 0, buffer, 0, 4);
+        Array.Copy(BitConverter.GetBytes(STX),  0, buffer, 0, 4);
         Array.Copy(BitConverter.GetBytes(size), 0, buffer, 4, 4);
+        Array.Copy(BitConverter.GetBytes(isNN ? 1 : 0), 0, buffer, 8, 4);
 
-        return size + 8;
+        return size + OVERHEAD_SIZE;
+    }
+
+    IEnumerator CoroutineStartSocket()
+    {
+        IPAddress ipa = IPAddress.Parse(ip);
+        outEP = new IPEndPoint(ipa, port);
+        recv_sae = new SocketAsyncEventArgs();
+        recv_sae.Completed += transfer_callback;
+        socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        Interlocked.Exchange(ref socketIsBusy, 0);
+
+        bool isAsync = false;
+        var connect_sae = new SocketAsyncEventArgs();
+        try {
+            Debug.Log($"trying to connect to {outEP}...");
+            line1 = $"trying to connect to {outEP}...";
+
+            Interlocked.Exchange(ref socketIsBusy, 1);
+            connect_sae.Completed += connect_callback; ///socket_(s, e) => autoResetEvent.Set();
+            connect_sae.RemoteEndPoint = outEP;
+            isAsync = socket.ConnectAsync(connect_sae);
+        }
+        catch (SocketException e) {
+            line1 = $"failed to connect to {outEP}!";
+            Debug.Log($"failed: {e}\n");
+        }
+
+
+        int count = 0;
+        while (isAsync && 1 == Interlocked.CompareExchange(ref socketIsBusy, 0, 0)) {
+            Debug.Log($"waiting {count++}");
+            if(count == 10) {
+                DisposeSocket();
+                break;
+            }
+            yield return new WaitForSeconds(1);
+        }
+
+        if (!socket.Connected) {
+            DisposeSocket();
+            line1 = $"connection failed: {connect_sae.SocketError}.";
+        }
+        else {
+
+            socketStatus = SocketStatus.CONNECTED;
+            Button1UpdateString($"STOP socket to\n{ip}:{port}");
+            line1 = $"connected to {outEP}.";
+
+            int r;
+            byte[] config_buffer = new byte[16];
+            try {
+                line1 = "sending config...";
+
+                Array.Copy(BitConverter.GetBytes((int)im_original_cols), 0, config_buffer, 0, 4);
+                Array.Copy(BitConverter.GetBytes((int)im_original_rows), 0, config_buffer, 4, 4);
+                Array.Copy(BitConverter.GetBytes((int)im_resized_cols), 0, config_buffer, 8, 4);
+                Array.Copy(BitConverter.GetBytes((int)im_resized_rows), 0, config_buffer, 12, 4);
+
+            }
+            catch (Exception e) {
+                Debug.Log($"Something happen.\n{e}");
+                line1 = $"Error in config.";
+            }
+
+            yield return StartCoroutine(SendAsyncCoroutine(config_buffer, config_buffer.Length));
+
+            Debug.Log("Sent config.");
+            line1 = "config sent.";
+
+            config_buffer[0] = 0;
+
+            recv_sae.SetBuffer(config_buffer, 0, 12);
+
+            yield return StartCoroutine("RecvCoroutine");
+
+            int ln = 0, nn;
+            if (BitConverter.ToInt32(config_buffer, 0) == STX) {
+                ln = BitConverter.ToInt32(config_buffer, 4);
+                nn = BitConverter.ToInt32(config_buffer, 8);
+            }
+            else {
+                throw new SocketException();
+            }
+            Debug.Log($"Recv ln={ln} and nn={nn}.");
+            line1 = $"Classes: l={ln}, n={nn}.";
+
+            byte[] cbuf = new byte[ln];
+            recv_sae.SetBuffer(cbuf, 0, ln);
+            yield return StartCoroutine("RecvCoroutine");
+
+            if (recv_sae.BytesTransferred < ln) throw new Exception($"Not all class string received (missing {ln} bytes).");
+
+            try {
+                int ci = 0;
+                BinaryReader br = new BinaryReader(new MemoryStream(cbuf));
+                StringBuilder sb = new StringBuilder("");
+                categories = new string[nn];
+                for (int i = 0; i < ln; i++) {
+                    char c = '_';
+                    try {
+                        c = br.ReadChar();
+                        if (c == '\0') {
+                            categories[ci++] = sb.ToString();
+                            sb.Clear();
+                        }
+                        else {
+                            sb.Append(c);
+                        }
+                    }
+                    catch (Exception e) {
+                        Debug.Log($"Error in recv classes while loop: {e}");
+                    }
+                }
+            }
+            catch (Exception e) {
+                Debug.Log($"Error in recv classes: {e.Message}.");
+            }
+
+            try {
+                buffer_size = OVERHEAD_SIZE + (uint)im_resized_size_bytes;
+                buffer = new byte[buffer_size + 10];
+                rbuffer = new byte[160];
+                recv_sae.SetBuffer(rbuffer, 0, 150);
+            }
+            catch {
+                Debug.Log("Error in RSetBuffer: 482.");
+            }
+
+            Array.Copy(STXb, buffer, 4);
+
+            Debug.Log($"Buffer length: {buffer.Length}\n");
+
+            line1 = $"Config received.";
+
+
+
+            recognizer = new GestureRecognizer();
+            recognizer.SetRecognizableGestures(GestureSettings.Tap);
+            recognizer.Tapped += TapHandler;
+            recognizer.StartCapturingGestures();
+
+
+            enabled = true;
+            processing = WAIT_FRAME;
+        }
     }
 
     private async Task StartSocket()
@@ -530,6 +928,7 @@ public class SocketScript : MonoBehaviour
         if (e.LastOperation == SocketAsyncOperation.Receive)
             recv_sae_error = e.SocketError;
         Interlocked.Exchange(ref socketIsBusy, 0);
+        line1 = e.SocketError.ToString();
     }
 
     private async Task SendConfig()
@@ -615,6 +1014,31 @@ public class SocketScript : MonoBehaviour
         line1 = $"Config received.";
     }
 
+    public IEnumerator SendAsyncCoroutine(byte[] b, int l)
+    {
+        bool isAsync = false;
+        send_sae = new SocketAsyncEventArgs();
+        try {
+            send_sae.Completed += transfer_callback;
+            try {
+                send_sae.SetBuffer(b, 0, l);
+            }
+            catch {
+                Debug.Log("Error in SSetBuffer: 505.");
+            }
+            Interlocked.Exchange(ref socketIsBusy, 1);
+            isAsync = socket.SendAsync(send_sae);
+        }
+        catch (Exception e) {
+            Debug.Log("Socket::Send:\t" + e.Message);
+        }
+        while (isAsync && 1 == Interlocked.CompareExchange(ref socketIsBusy, 0, 0)) {
+            yield return null;
+        }
+        if (send_sae.SocketError != SocketError.Success) Debug.Log("Socket::Send: error = " + send_sae.SocketError);
+        send_sae.Dispose();
+    }
+
     public async Task<int> SendAsync(byte[] b, int l)
     {
         try {
@@ -643,6 +1067,21 @@ public class SocketScript : MonoBehaviour
         return -1;
     }
 
+    public IEnumerator RecvCoroutine()
+    {
+        bool isAsync = false;
+        try {
+            Interlocked.Exchange(ref socketIsBusy, 1);
+            isAsync = socket.ReceiveAsync(recv_sae);
+        }
+        catch (Exception e) {
+            Debug.Log(e.Message);
+        }
+        while (isAsync && 1 == Interlocked.CompareExchange(ref socketIsBusy, 0, 0)) {
+            yield return null;
+        }
+    }
+
     public async Task<int> Receive()
     {
         try {
@@ -662,12 +1101,15 @@ public class SocketScript : MonoBehaviour
 
     private async Task StartCapturer()
     {
+        line2 = "starting capturer.";
+
         MediaFrameSource mediaFrameSource;
         var allGroups = await MediaFrameSourceGroup.FindAllAsync();
         if (allGroups.Count <= 0) {
             line2 = "no media!";
+            return;
         }
-        var mediaCapture = new MediaCapture();
+        mediaCapture = new MediaCapture();
         var settings = new MediaCaptureInitializationSettings
         {
             SourceGroup = allGroups[0],
@@ -678,15 +1120,12 @@ public class SocketScript : MonoBehaviour
 
         await mediaCapture.InitializeAsync(settings);
 
-        //render.material.color = new Color(0, 0, 0.5f);
-
         string formats = "";
 
         mediaFrameSource = mediaCapture.FrameSources.Values.Single(x => x.Info.MediaStreamType == MediaStreamType.VideoRecord);
         try {
             MediaFrameFormat targetResFormat = null;
             foreach (var f in mediaFrameSource.SupportedFormats.OrderBy(x => x.VideoFormat.Width * x.VideoFormat.Height)) {
-                //textmesh.text = string.Format("{0}x{1} {2}/{3}", f.VideoFormat.Width, f.VideoFormat.Height, f.FrameRate.Numerator, f.FrameRate.Denominator);
                 if (f.VideoFormat.Width == im_original_cols && f.VideoFormat.Height == im_original_rows && f.FrameRate.Numerator == framerate) {
                     targetResFormat = f;
                 }
@@ -699,7 +1138,10 @@ public class SocketScript : MonoBehaviour
         }
         catch {
             line2 = "no right format!";
+            return;
         }
+
+
 
         try {
             frameReader = await mediaCapture.CreateFrameReaderAsync(mediaFrameSource, MediaEncodingSubtypes.Bgra8);
@@ -708,19 +1150,28 @@ public class SocketScript : MonoBehaviour
         }
         catch {
             line2 = "no event handling!";
+            return;
         }
+
+        //	gr: taken from here https://forums.hololens.com/discussion/2009/mixedrealitycapture
+        videoEffect = new VideoMRCSettings(true, 0.9f, true, 0);
+        //if (mediaCapture.MediaCaptureSettings.VideoDeviceCharacteristic == VideoDeviceCharacteristic.AllStreamsIdentical ||
+        //    mediaCapture.MediaCaptureSettings.VideoDeviceCharacteristic == VideoDeviceCharacteristic.PreviewRecordStreamsIdentical) {
+        //    // This effect will modify both the preview and the record streams, because they are the same stream.
+        //    videoEffectRecord =  await mediaCapture.AddVideoEffectAsync(videoEffect, MediaStreamType.VideoRecord);
+        //}
+        //else {
+        videoEffectRecord =  await mediaCapture.AddVideoEffectAsync(videoEffect, MediaStreamType.VideoRecord);
+            //videoEffectPreview = await mediaCapture.AddVideoEffectAsync(videoEffect, MediaStreamType.VideoPreview);
+        //}
+
+        await frameReader.StartAsync();
 
         line2 = "capturer started.";
     }
 
-    private void Code()
+    private void PrepareEncoderNN()
     {
-        inMemStream = new InMemoryRandomAccessStream();
-#if CODING_AWAIT
-        encoder = await BitmapEncoder.CreateAsync(config.EncoderGuid, inMemStream);
-#else
-        encoder = BitmapEncoder.CreateAsync(BitmapEncoder.BmpEncoderId, inMemStream).AsTask().GetAwaiter().GetResult();
-#endif
         encoder.BitmapTransform.Flip = BitmapFlip.Vertical;
         switch (im_transform) {
             case CTEnum.CROPPED:
@@ -759,6 +1210,31 @@ public class SocketScript : MonoBehaviour
 }
 
 #if NETFX_CORE
+//	from https://forums.hololens.com/discussion/2009/mixedrealitycapture
+public class VideoMRCSettings : IVideoEffectDefinition
+{
+    public string ActivatableClassId
+    {
+        get
+        {
+            return "Windows.Media.MixedRealityCapture.MixedRealityCaptureVideoEffect";
+        }
+    }
+
+    public IPropertySet Properties
+    {
+        get; private set;
+    }
+
+    public VideoMRCSettings(bool HologramCompositionEnabled, float GlobalOpacityCoefficient, bool VideoStabilizationEnabled = false, int VideoStabilizationBufferLength = 0)
+    {
+        Properties = (IPropertySet)new PropertySet();
+        Properties.Add("HologramCompositionEnabled", HologramCompositionEnabled);
+        Properties.Add("VideoStabilizationEnabled", VideoStabilizationEnabled);
+        Properties.Add("VideoStabilizationBufferLength", VideoStabilizationBufferLength);
+        Properties.Add("GlobalOpacityCoefficient", GlobalOpacityCoefficient);
+    }
+}
 
 public enum CTEnum
 {
