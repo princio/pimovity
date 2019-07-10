@@ -477,7 +477,7 @@ int HoloCoo::run(unsigned int port) {
 
 
     cv::namedWindow("streaming_window", cv::WINDOW_NORMAL  );
-	// cv::resizeWindow("streaming_window", 896*3, 504*3);
+	cv::resizeWindow("streaming_window", 1280, 720);
 
 	if(ncs->initDevice()) exit(1);
 
