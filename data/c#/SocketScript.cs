@@ -14,11 +14,11 @@ using HoloToolkit.Unity.InputModule;
 using HoloToolkit.Unity;
 using UnityEngine.XR.WSA.Input;
 using HoloToolkit.Examples.InteractiveElements;
+
+#if NETFX_CORE
 using Windows.Media.Effects;
 using Windows.Foundation.Collections;
 using Windows.Media;
-
-#if NETFX_CORE
 using Stopwatch = System.Diagnostics.Stopwatch;
 using System.Collections.Generic;
 using Windows.Foundation;
@@ -34,7 +34,6 @@ public class SocketScript : MonoBehaviour
 {
 
     public GameObject bbox;
-    public GameObject label;
     public GameObject button1;
     public GameObject button2;
     public GameObject btn_show_menu;
@@ -58,17 +57,13 @@ public class SocketScript : MonoBehaviour
 #if NETFX_CORE
     private const int OVERHEAD_SIZE = 12; // STX:4,TYPE:1,INDEX:4,LENGTH:4,BUFFER:x,EXT:4
     private const int STX = 27692;//767590; //2,7,0,6,1,9,9,2=10,111,0,110,1,1001,1001,10=101110110110011001, int signed little order
-    private const int ETX = 170807; //24121953
     private static byte[] STXb = BitConverter.GetBytes(STX);
-    private static byte[] ETXb = BitConverter.GetBytes(ETX);
-    private int startProcessing = 0;
     private IPEndPoint outEP;
     public SocketAsyncEventArgs recv_sae;
     private string[] categories;
     private uint buffer_size;
     private byte[] buffer;
     private byte[] rbuffer;
-    private int timeouts;
     private Socket socket;
     private int socketIsBusy;
     private MediaFrameReader frameReader;
@@ -80,18 +75,15 @@ public class SocketScript : MonoBehaviour
     private SocketError send_sae_error;
     private SocketError recv_sae_error;
     private GestureRecognizer recognizer;
-    private int isEncoding;
     private int tapped;
     private GameObject photoBBox;
     private GameObject quad;
     private Renderer quadRenderer;
-    private GameObject quadTM;
+    private GameObject label;
     private float distance;
-    private int capturePhoto;
     private int processing;
-    private bool isProcessing;
-    private CTEnum im_transform = CTEnum.SCALED;
 
+    private CTEnum im_transform = CTEnum.SCALED;
     private int im_original_cols = 0;
     private int im_original_rows = 0;
     private int im_resized_cols = 0;
@@ -101,12 +93,15 @@ public class SocketScript : MonoBehaviour
     private int im_resized_size_bytes = 0;
     private TextMesh st;
     private SocketAsyncEventArgs send_sae;
-    private bool isConnectStart;
     private SocketStatus socketStatus;
     private MediaCapture mediaCapture;
-    private int processingStreaming;
-    private int processingNN;
     private int requestNN;
+
+    const int NOT_READY = 0;
+    const int WAIT_FRAME = 1;
+    const int SAVE_FRAME = 2;
+    const int TO_ELABORATE = 3;
+    const int ELABORATING = 4;
 
     public IVideoEffectDefinition videoEffect { get; private set; }
 
@@ -149,6 +144,7 @@ public class SocketScript : MonoBehaviour
 
     private void DisposeSocket()
     {
+#if !UNITY_EDITOR
         try {
             socket.Shutdown(SocketShutdown.Both);
         }
@@ -161,6 +157,7 @@ public class SocketScript : MonoBehaviour
 
         socketStatus = SocketStatus.NONE;
         Button1UpdateString($"Connect to\n{ip}:{port}");
+#endif
     }
 
     public void ButtonConnectDown()
@@ -169,24 +166,32 @@ public class SocketScript : MonoBehaviour
 #if NETFX_CORE
         string b_str = "";
         ///*await*/ StartSocket();
-        switch(socketStatus) {
-            case SocketStatus.NONE:
-                socketStatus = SocketStatus.TRY;
-                StartCoroutine("CoroutineStartSocket");
-                b_str = $"STOP\n(trying to {ip}:{port})";
-                break;
-            case SocketStatus.TRY:
-                socketStatus = SocketStatus.NONE;
-                StopCoroutine("CoroutineStartSocket");
-                socket = null;
-                b_str = $"Connect to\n{ip}:{port}";
-                break;
-            case SocketStatus.CONNECTED:
-                socketStatus = SocketStatus.NONE;
-                socket.Shutdown(SocketShutdown.Both);
-                socket = null;
-                b_str = $"Connect to\n{ip}:{port}";
-                break;
+        try {
+            switch (socketStatus) {
+                case SocketStatus.NONE:
+                    socketStatus = SocketStatus.TRY;
+                    StartCoroutine("CoroutineStartSocket");
+                    b_str = $"STOP\n(trying to {ip}:{port})";
+                    break;
+                case SocketStatus.TRY:
+                    StopCoroutine("CoroutineStartSocket");
+                    Interlocked.Exchange(ref processing, NOT_READY);
+                    socketStatus = SocketStatus.NONE;
+                    socket?.Dispose();
+                    socket = null;
+                    b_str = $"Connect to\n{ip}:{port}";
+                    break;
+                case SocketStatus.CONNECTED:
+                    Interlocked.Exchange(ref processing, NOT_READY);
+                    socketStatus = SocketStatus.NONE;
+                    socket.Shutdown(SocketShutdown.Both);
+                    socket?.Dispose();
+                    socket = null;
+                    b_str = $"Connect to\n{ip}:{port}";
+                    break;
+            }
+        } catch (Exception e) {
+            Debug.Log($"Button Connect: {e}");
         }
 
         Button1UpdateString(b_str);
@@ -240,9 +245,9 @@ public class SocketScript : MonoBehaviour
         }
         return max;
     }
-
     void TextMesh2Ip()
     {
+#if !UNITY_EDITOR
         IPAddress ipa;
         string __ip = "";
         for (int i = 0; i < 12; i+=3) {
@@ -271,6 +276,7 @@ public class SocketScript : MonoBehaviour
 
         button1.GetComponent<LabelTheme>().Default = $"Connect to\n{ip}:{port}";
         button1.transform.GetChild(1).GetChild(1).GetComponent<TextMesh>().text = $"Connect to\n{ip}:{port}";
+#endif
     }
 
     void Ip2TextMesh()
@@ -368,8 +374,6 @@ public class SocketScript : MonoBehaviour
         }
         Debug.Log(names);
         textmesh_digits[0].color = Color.red;
-        button1.GetComponent<LabelTheme>().Default = $"Connect to\n{ip}:{port}";
-        button1.transform.GetChild(1).GetChild(1).GetComponent<TextMesh>().text = $"Connect to\n{ip}:{port}";
 
 
         framerate = 5;
@@ -382,10 +386,10 @@ public class SocketScript : MonoBehaviour
         ip = "192.168.1.141";
         socket = null;
         tapped = 0;
-        startProcessing = 0;
         rbuffer = new byte[256];
 
         Ip2TextMesh();
+        Button1UpdateString($"Connect to\n{ip}:{port}");
 
         processing = NOT_READY;
 
@@ -407,12 +411,18 @@ public class SocketScript : MonoBehaviour
     {
         UpdateStatus();
 
+        if(socket != null && !socket.Connected) {
+            Interlocked.Exchange(ref processing, NOT_READY);
+            socket.Dispose();
+            socketStatus = SocketStatus.NONE;
+        }
+
         if (TO_ELABORATE == Interlocked.CompareExchange(ref processing, ELABORATING, TO_ELABORATE)) {
             StartCoroutine("CoroutineAll", requestNN == 1);
         }
     }
 
-    private void InitBBox()
+    private void BBoxInit()
     {
         hitPosition = GazeManager.Instance.HitPosition;
         cameraMain = CameraCache.Main;//GazeManager.Instance.HitNormal;
@@ -423,23 +433,37 @@ public class SocketScript : MonoBehaviour
         photoBBox.transform.position = hitPosition;
         photoBBox.transform.forward = cameraMain.transform.forward;
         photoBBox.transform.Rotate(-photoBBox.transform.eulerAngles.x, 0, -photoBBox.transform.eulerAngles.z);
-        quad = photoBBox.transform.Find("Quad").gameObject;
+        quad = photoBBox.transform.Find("BBoxQuad").gameObject;
         quadRenderer = quad.GetComponent<Renderer>() as Renderer;
-        label = photoBBox.transform.Find("Label").gameObject;
+        label = photoBBox.transform.Find("BBoxLabel").gameObject;
         labelTM = label.GetComponent<TextMesh>();
         labelTM.text = "trying...";
     }
 
     private void TapHandler(TappedEventArgs obj)
     {
-        Interlocked.CompareExchange(ref requestNN, 1, 0);
-    }
+        var hitObj = GazeManager.Instance.HitObject;
+        string name = (hitObj == null) ? "null" : hitObj.name;
 
-    const int NOT_READY =     0;
-    const int WAIT_FRAME =    1;
-    const int SAVE_FRAME =    2;
-    const int TO_ELABORATE =  3;
-    const int ELABORATING =   4;
+        if(hitObj == null) {
+            line3 = "hit null";
+            Interlocked.CompareExchange(ref requestNN, 1, 0);
+        }
+        else
+        if(hitObj.tag.IndexOf("SocketUI") < 0)
+        {
+
+            if(hitObj.transform.parent.name.IndexOf("BBox", 0) >= 0) {
+                DestroyImmediate(hitObj.transform.parent);
+            }
+
+            Interlocked.CompareExchange(ref requestNN, 1, 0);
+
+            line3 = name;
+
+            Debug.Log(hitObj.tag);
+        }
+    }
 
     private void OnFrameArrived(MediaFrameReader sender, MediaFrameArrivedEventArgs args)
     {
@@ -497,7 +521,7 @@ public class SocketScript : MonoBehaviour
         if(isNN) {
             line3 = "NN coding...";
             Interlocked.Exchange(ref requestNN, 0);
-            InitBBox();
+            BBoxInit();
         } else {
             line3 = "Photo coding...";
         }
@@ -528,18 +552,13 @@ public class SocketScript : MonoBehaviour
             try {
                 send_sae.Completed += transfer_callback;
                 send_sae.SetBuffer(buffer, 0, size);
+                socketIsBusy = 1;
+                isAsync = socket.SendAsync(send_sae);
             }
-            catch (SocketException e) {
-                Debug.LogFormat("Receiving timeout." + e.SocketErrorCode.ToString());
+            catch (Exception e) {
+                Debug.Log($"Error in CoroutineSending: {e}.");
                 yield break;
             }
-            catch {
-                Debug.Log("Error in SSetBuffer: 205.");
-                yield break;
-            }
-
-            socketIsBusy = 1;
-            isAsync = socket.SendAsync(send_sae);
 
             if (!isAsync) {
                 while (socketIsBusy == 1) {
@@ -557,8 +576,7 @@ public class SocketScript : MonoBehaviour
         }
 
         if (sent < size) {
-            Debug.LogFormat("Error after sending [{0} > {1}]: \"{2}\"", size, sent, send_sae.SocketError);
-            yield break;
+            //Debug.LogFormat("Error after sending [{0} > {1}]: \"{2}\"", size, sent, send_sae.SocketError);
         }
         inMemStream.Dispose();
 
@@ -573,7 +591,7 @@ public class SocketScript : MonoBehaviour
             isAsync = socket.ReceiveAsync(recv_sae);
         }
         catch (Exception e) {
-            Debug.Log(e.Message);
+            Debug.Log($"Error in CoroutineReceiving: {e}.");
             yield break;
         }
         if (!isAsync) {
@@ -587,12 +605,12 @@ public class SocketScript : MonoBehaviour
         }
         line3 = "Recv response.";
 
-        HandleBBox(recv_sae.BytesTransferred);
+        BBoxesHandler(recv_sae.BytesTransferred);
 
         ++photoIndex;
     }
 
-    private void HandleBBox(int rl)
+    private void BBoxesHandler(int rl)
     {
         int nbbox, stx;
 
@@ -606,7 +624,7 @@ public class SocketScript : MonoBehaviour
                 breader = new BinaryReader(new MemoryStream(recv_sae.Buffer));
             }
             catch (Exception e) {
-                Debug.Log("HandleBBox: " + e);
+                Debug.Log("BBoxesHandler: " + e);
                 return;
             }
             stx = breader.ReadInt32();
@@ -641,7 +659,7 @@ public class SocketScript : MonoBehaviour
                     line1 += categories[cindex] + ",";
                 }
 
-                GenBBox(_w, _h, _x, _y, _p, _cindex);
+                BBoxCorrect(_w, _h, _x, _y, _p, _cindex);
             }
             else
             if (nbbox == 0) {
@@ -654,7 +672,7 @@ public class SocketScript : MonoBehaviour
             }
         }
         catch {
-            Debug.Log("HandleBBox error.");
+            Debug.Log("BBoxesHandler error.");
         }
         finally {
             Interlocked.Exchange(ref tapped, 0);
@@ -662,7 +680,7 @@ public class SocketScript : MonoBehaviour
         }
     }
 
-    private void GenBBox(float w, float h, float x, float y, float p, int cindex)
+    private void BBoxCorrect(float w, float h, float x, float y, float p, int cindex)
     {
         var z = distance;
 
@@ -672,7 +690,7 @@ public class SocketScript : MonoBehaviour
         box.transform.forward = quat * Vector3.forward;
         box.transform.Rotate(-box.transform.eulerAngles.x, 0, -box.transform.eulerAngles.z); // makes bbox vertical
 
-        var quad = box.transform.Find("Quad").gameObject;
+        var quad = box.transform.Find("BBoxQuad").gameObject;
         var quadRenderer = quad.GetComponent<Renderer>() as Renderer;
         Bounds quadBounds = quadRenderer.bounds;
 
@@ -691,8 +709,7 @@ public class SocketScript : MonoBehaviour
 
         Debug.Log($"{z}\n{x}, {y}, {w}, {h}\n{quadBounds.size}\n{quadBounds.size.normalized}\n{quadBounds}\n{quad.transform.localScale}");
 
-        var label = box.transform.Find("Label").gameObject.GetComponent<TextMesh>();
-        label.text = categories[cindex] + $"[{Math.Ceiling(p * 100f)}%]";
+        box.transform.Find("BBoxLabel").gameObject.GetComponent<TextMesh>().text = $"[{Math.Ceiling(p * 100f)}%]\n{categories[cindex]}";
     }
 
     private int PreparePacket(bool isNN)
@@ -794,7 +811,7 @@ public class SocketScript : MonoBehaviour
                 nn = BitConverter.ToInt32(config_buffer, 8);
             }
             else {
-                throw new SocketException();
+                Debug.Log($"Wrong STX config buffer.");
             }
             Debug.Log($"Recv ln={ln} and nn={nn}.");
             line1 = $"Classes: l={ln}, n={nn}.";
@@ -803,7 +820,9 @@ public class SocketScript : MonoBehaviour
             recv_sae.SetBuffer(cbuf, 0, ln);
             yield return StartCoroutine("RecvCoroutine");
 
-            if (recv_sae.BytesTransferred < ln) throw new Exception($"Not all class string received (missing {ln} bytes).");
+            if (recv_sae.BytesTransferred < ln) {
+                Debug.Log($"Too less bytes for class names.");
+            }
 
             try {
                 int ci = 0;

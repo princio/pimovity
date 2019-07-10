@@ -21,11 +21,11 @@ file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
 add_executable(gengi ${SOURCES})
 
 set(spdlog_DIR /home/developer/spdlog/bin/lib/spdlog/cmake/)
-#set(OpenCV_DIR /home/developer/opencvs/OpenCV-4.1.0/bin/lib/cmake/opencv4/)
+set(OpenCV_DIR /home/developer/opencvs/OpenCV-4.1.0/bin/lib/cmake/opencv4/)
 find_package(spdlog REQUIRED)
-#find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED)
 
-target_link_libraries(gengi PRIVATE spdlog::spdlog mvnc m jpeg turbojpeg )#${OpenCV_LIBS})   # -l flags for linking prog target
+target_link_libraries(gengi PRIVATE spdlog::spdlog mvnc m jpeg turbojpeg ${OpenCV_LIBS})   # -l flags for linking prog target
 
 
 # Set the directories that should be included in the build command for this target

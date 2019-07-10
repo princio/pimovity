@@ -27,8 +27,8 @@
 #include <unistd.h>
 #include <stdexcept>
 
-//#include <opencv2/opencv.hpp>
-//#include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
 #define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
@@ -405,7 +405,6 @@ int HoloCoo::recvImagesLoop() {
 	while(1) {
 		int nbbox, sl, ba;
 
-
 		sl = recvImage();
 		if(sl) {
 			if(sl == -2) {
@@ -429,18 +428,28 @@ int HoloCoo::recvImagesLoop() {
 			if(0 > elaborate_ncs())  break;
 		} else
 		if(rpacket->type == 0) {
-			std::stringstream fname;
-			fname << "/home/developer/pimovity-holo/phs/holo_" << counter++ << "%d.jpg";
-			FILE*f = fopen(fname.str().c_str(), "wb");
-			int fr = fwrite( rpacket->image, 1, rpacket->l, f );
-			if(fr < 0) {
-				SPDLOG_ERROR("Error during writing.");
-			} else
-			if(fr != rpacket->l) {
-				SPDLOG_ERROR("Not all bytes written to file.");
-			}
-			fclose(f);
+			cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
+			auto mat_bmp = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
+			cv::imshow("streaming_window", mat_bmp);
+			cv::waitKey(1);
+			// std::stringstream fname;
+			// fname << "/home/developer/pimovity-holo/phs/holo_" << counter++ << "%d.jpg";
+			// FILE*f = fopen(fname.str().c_str(), "wb");
+			// int fr = fwrite( rpacket->image, 1, rpacket->l, f );
+			// if(fr < 0) {
+			// 	SPDLOG_ERROR("Error during writing.");
+			// } else
+			// if(fr != rpacket->l) {
+			// 	SPDLOG_ERROR("Not all bytes written to file.");
+			// }
+			// fclose(f);
 		}
+	}
+
+	int to_discard = 0;
+	REPORTSPD_ERRNO(0 > ioctl(fd_uy, FIONREAD, &to_discard));
+	while(to_discard > rpacket_buffer_size) {
+		to_discard -= recv(fd_uy, rpacket->image, to_discard > rpacket_buffer_size ? rpacket_buffer_size : to_discard, 0);
 	}
 
 	free(rpacket);
@@ -467,6 +476,9 @@ int HoloCoo::run(unsigned int port) {
 	if(startServer()) return -1;
 
 
+    cv::namedWindow("streaming_window", cv::WINDOW_NORMAL  );
+	// cv::resizeWindow("streaming_window", 896*3, 504*3);
+
 	if(ncs->initDevice()) exit(1);
 
 	while(1) {
@@ -487,6 +499,8 @@ int HoloCoo::run(unsigned int port) {
 	}
 
 	ncs->~NCS();
+
+	cv::destroyAllWindows();
 
 	return 0;
 }
