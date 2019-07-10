@@ -1,4 +1,6 @@
-#WINDOWS
+# Configurations
+
+## WINDOWS
 
 New Unity Project with Unity 2017.4.20f2.
 
