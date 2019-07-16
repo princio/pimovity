@@ -482,9 +482,10 @@ int Coordinator::elaborate_ncs() {
 		expected = NCS_TODO;
 		if(inference_atomic.compare_exchange_strong(expected, NCS_DOING)) {
 			SPDLOG_DEBUG("Atomic: NCS_TODO -> NCS_DOING.");
-			nbboxes = ncs->inference_byte(mat_raw_resized.data, 1);
+			nbboxes = ncs->inference_byte(mat_raw_resized.data, 5);
 			SPDLOG_DEBUG("Inference done.");
 
+			
 			++imcounter;
 			for(int i = nbboxes-1; i >= 0; --i) {
 				rgb_pixel color;
@@ -529,19 +530,20 @@ int Coordinator::recvImagesLoop() {
 	memset(&spacket, 0, sizeof(SendPacket));
 	spacket.stx = 27692;
 	spacket.l = sizeof(spacket.bboxes);
+	spacket.n = 0;
 	spacket.type = 1;
 	if(disable_ncs) {
-		spacket.bboxes.box.x = 0.5;
-		spacket.bboxes.box.y = 0.6;
-		spacket.bboxes.box.w = 0.7;
-		spacket.bboxes.box.h = 0.8;
-		spacket.bboxes.objectness = 0.1;
-		spacket.bboxes.prob = 0.2;
-		spacket.bboxes.cindex = 21;
+		spacket.bboxes[0].box.x = 0.5;
+		spacket.bboxes[0].box.y = 0.6;
+		spacket.bboxes[0].box.w = 0.7;
+		spacket.bboxes[0].box.h = 0.8;
+		spacket.bboxes[0].objectness = 0.1;
+		spacket.bboxes[0].prob = 0.2;
+		spacket.bboxes[0].cindex = 21;
 	}
 
 
-	ncs->nn.bboxes = &spacket.bboxes;
+	ncs->nn.bboxes = spacket.bboxes;
 	
 
 	if (0 > send(fd_pi, stxs, 8, 0)) return -1;
@@ -593,6 +595,7 @@ int Coordinator::recvImagesLoop() {
 		if(inference_atomic.compare_exchange_weak(expected, NCS_DONE)) {
 			//sl = send(fd_uy, (void*) &spacket, sizeof(SendPacket), 0);
 			if(nbboxes > 0) {
+				spacket.n = nbboxes;
 				sl = send(fd_uy, &spacket, sizeof(SendPacket), 0);
 				SPDLOG_ERROR("Sent {} bytes to unity as bboxes.", sl);
 			}
@@ -642,13 +645,15 @@ int Coordinator::run(unsigned int port) {
 
 	ret = INT32_MAX;
 
+
 	SPDLOG_INFO("Starting server...");
 	if(startServer()) return -1;
 	SPDLOG_INFO("Waiting for Pi and Unity...");
 	ret = waitPiAndUy();
 	if(ret < 0) return -1;
-
+	
 	if(disable_ncs == false && ncs->initDevice()) exit(1);
+
 
 	ret = recvImages();
 	if(ret < 0) {

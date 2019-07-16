@@ -60,8 +60,8 @@ typedef struct SendPacket
     int l;
     int type;
     //int index;
-    // int n;
-    bbox bboxes;
+    int n;
+    bbox bboxes[5];
 } SendPacket;
 
 class Coordinator {

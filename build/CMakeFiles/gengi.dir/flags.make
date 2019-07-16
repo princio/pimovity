@@ -6,5 +6,5 @@ CXX_FLAGS =   -std=gnu++11
 
 CXX_DEFINES = -DSPDLOG_COMPILED_LIB
 
-CXX_INCLUDES = -I/usr/include/opencv -I/home/developer/pimovity/include -isystem /home/developer/spdlog/bin/include 
+CXX_INCLUDES = -I/home/developer/pimovity/include -isystem /home/developer/spdlog/bin/include -isystem /home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4 
 
