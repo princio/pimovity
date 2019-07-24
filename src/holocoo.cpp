@@ -27,8 +27,8 @@
 #include <unistd.h>
 #include <stdexcept>
 
-#include <opencv2/opencv.hpp>
-#include <opencv2/imgcodecs.hpp>
+//#include <opencv2/opencv.hpp>
+//#include <opencv2/imgcodecs.hpp>
 
 #define RECV(rl, fd, buf, l, flags) if((rl = recv(fd, buf, l, flags)) == -1) return -1;
 #define SEND(rl, fd, buf, l, flags) if((rl = send(fd, buf, l, flags)) == -1) return -1;
@@ -428,10 +428,10 @@ int HoloCoo::recvImagesLoop() {
 			if(0 > elaborate_ncs())  break;
 		} else
 		if(rpacket->type == 0) {
-			cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
+			/*cv::Mat mat_jpeg(rpacket->l, 1, CV_8UC3, rpacket->image);
 			auto mat_bmp = cv::imdecode(mat_jpeg, cv::IMREAD_COLOR);
 			cv::imshow("streaming_window", mat_bmp);
-			cv::waitKey(1);
+			cv::waitKey(1);*/
 			// std::stringstream fname;
 			// fname << "/home/developer/pimovity-holo/phs/holo_" << counter++ << "%d.jpg";
 			// FILE*f = fopen(fname.str().c_str(), "wb");
@@ -476,8 +476,8 @@ int HoloCoo::run(unsigned int port) {
 	if(startServer()) return -1;
 
 
-    cv::namedWindow("streaming_window", cv::WINDOW_NORMAL  );
-	cv::resizeWindow("streaming_window", 1280, 720);
+    //cv::namedWindow("streaming_window", cv::WINDOW_NORMAL  );
+	//cv::resizeWindow("streaming_window", 1280, 720);
 
 	if(ncs->initDevice()) exit(1);
 
@@ -500,7 +500,7 @@ int HoloCoo::run(unsigned int port) {
 
 	ncs->~NCS();
 
-	cv::destroyAllWindows();
+	//cv::destroyAllWindows();
 
 	return 0;
 }

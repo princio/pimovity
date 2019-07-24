@@ -20,10 +20,10 @@ file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
 # Add an executable with the above sources
 add_executable(gengi ${SOURCES})
 
-set(spdlog_DIR /home/developer/spdlog/bin/lib/spdlog/cmake/)
-set(OpenCV_DIR /home/developer/opencvs/OpenCV-4.1.0/bin/lib/cmake/opencv4/)
+set(spdlog_DIR /home/pi/spdlog/release/lib/spdlog/cmake/)
+#set(OpenCV_DIR /home/developer/opencvs/OpenCV-4.1.0/bin/lib/cmake/opencv4/)
 find_package(spdlog REQUIRED)
-find_package(OpenCV REQUIRED)
+#find_package(OpenCV REQUIRED)
 
 target_link_libraries(gengi PRIVATE spdlog::spdlog mvnc m jpeg turbojpeg ${OpenCV_LIBS})   # -l flags for linking prog target
 
