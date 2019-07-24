@@ -75,6 +75,17 @@ int file2bytes2(const char *filename, char **buf, unsigned int *n_bytes) {
 | CV_64F |  6 | 14 | 22 | 30 |   38 |   46 |   54 |   62 |
 +--------+----+----+----+----+------+------+------+------+
  */
+ 			
+bool file_exists (const char * name) {
+    if (FILE *file = fopen(name, "r")) {
+	fclose(file);
+        return true;
+    } else {
+	printf("%s:\t%s", name, strerror(errno));
+        return false;
+    }   
+}
+
 int main (int argc, char** argv) {
 
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -101,10 +112,23 @@ int main (int argc, char** argv) {
 		for(int i = 1; i < argc; i++) {
 			if(!strcmp(argv[i], "--ale")) {
 				char *ale = argv[i+1];
-				if(!strcmp(ale, "fe")) {
-					strcpy(graph, "../data/yolov2/ale/yolov2-tiny-ale-fe.graph");
-					strcpy(meta, "../data/yolov2/ale/yolov2-tiny-ale-fe.meta");
+				
+				strcpy(graph, "../data/yolov2/ale/yolov2-tiny-ale-"); 
+				strcat(graph, ale);
+				strcat(graph, ".graph");
+				strcpy(meta,  "../data/yolov2/ale/yolov2-tiny-ale-");
+				strcat(meta,  ale);
+				strcat(meta,  ".meta");
+				
+				if(!file_exists(graph)){
+					SPDLOG_WARN("No graph file found ({}): exit.", graph);
+					exit(1);
 				}
+				 if(!file_exists(graph))  {
+					SPDLOG_WARN("No meta file found ({}): exit.", meta);
+					exit(1);
+				}
+				
 			}
 			if(!strcmp(argv[i], "--iface")) {
 				iface = argv[i+1];

@@ -184,7 +184,7 @@ int HoloCoo::saveImage2Jpeg(byte *im, int index) {
     imjl = 200000;
     imj = tjAlloc((int) imjl);
     tjh = tjInitCompress();
-    ret = tjCompress2(tjh, im, ncs->nn.im_or_cols, 3 * ncs->nn.im_or_cols, ncs->nn.im_or_rows, TJPF_BGR, &imj, &imjl, TJSAMP_444, 100, 0);
+    ret = tjCompress2(tjh, im, ncs->nn.im_resized_cols, 3 * ncs->nn.im_resized_cols, ncs->nn.im_resized_rows, TJPF_BGR, &imj, &imjl, TJSAMP_444, 100, 0);
     REPORTSPD(ret, "image2jpeg: Tj compress error: «{}»", tjGetErrorStr());
     REPORTSPD(tjDestroy(tjh), "image2jpeg: Tj destroy Error: «{}»)", tjGetErrorStr());
     char filename[30];
@@ -369,7 +369,7 @@ int HoloCoo::elaborate_ncs() {
 
 	memcpy(im_bmp, rpacket->image, rpacket->l);
 
-	nbbox = ncs->inference_byte(im_bmp, 3, true);
+	nbbox = ncs->inference_byte(im_bmp, 3, false);
 
 	SPDLOG_DEBUG("Inference done: found {} nbbox", nbbox);
 
@@ -386,6 +386,9 @@ int HoloCoo::elaborate_ncs() {
 			ncs->nn.bboxes[i].box.x, ncs->nn.bboxes[i].box.y, ncs->nn.bboxes[i].box.w, ncs->nn.bboxes[i].box.h, ncs->nn.bboxes[i].objectness, ncs->nn.bboxes[i].prob, ncs->nn.classes[ncs->nn.bboxes[i].cindex]);
 
 		//drawBbox((rgb_pixel*) im_bmp, ncs->nn.bboxes[i].box, color);
+	}
+		saveImage2Jpeg(im_bmp, counter++);
+	if(nbbox) {
 	}
 	SPDLOG_TRACE("Stop {}.", nbbox);
 	return nbbox;
@@ -413,7 +416,7 @@ int HoloCoo::recvImagesLoop() {
 			if(++consecutive_wrong_packets == 10) {
 				SPDLOG_WARN("Wrong incoming packets from Pi for 10 consecutive times. Stop loop.");
 
-				sl = send(fd_pi, (void*) "\0\0\0\0", 16, 0);
+				//sl = send(fd_pi, (void*) "\0\0\0\0", 16, 0);
 				break;
 			} else {
 				int bytes_available = -1;
