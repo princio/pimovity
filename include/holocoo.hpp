@@ -55,6 +55,8 @@ class HoloCoo {
         struct sockaddr_in pi_addr;
         struct sockaddr_in uy_addr;
     public:
+        bool rgb = false;
+        bool savePhoto = false;
         unsigned int rpacket_buffer_size = 500*1024;
         NCS *ncs;
         RecvPacket *rpacket;

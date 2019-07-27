@@ -369,13 +369,14 @@ int HoloCoo::elaborate_ncs() {
 
 	memcpy(im_bmp, rpacket->image, rpacket->l);
 
-	nbbox = ncs->inference_byte(im_bmp, 3, false);
+	nbbox = ncs->inference_byte(im_bmp, 3, rgb);
 
 	SPDLOG_DEBUG("Inference done: found {} nbbox", nbbox);
 
 	spacket.stx = STX;
 	spacket.n = nbbox;
-	send(fd_uy, (byte*) &spacket, sizeof(SendPacket), 0);
+	int sl = send(fd_uy, (byte*) &spacket, sizeof(SendPacket), 0);
+	SPDLOG_INFO("\nSent {} bytes: {},{}.", sl, spacket.stx, spacket.n);
 
 	for(int i = nbbox-1; i >= 0; --i) {
 		rgb_pixel color;
@@ -387,8 +388,8 @@ int HoloCoo::elaborate_ncs() {
 
 		//drawBbox((rgb_pixel*) im_bmp, ncs->nn.bboxes[i].box, color);
 	}
+	if(savePhoto) {
 		saveImage2Jpeg(im_bmp, counter++);
-	if(nbbox) {
 	}
 	SPDLOG_TRACE("Stop {}.", nbbox);
 	return nbbox;

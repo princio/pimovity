@@ -90,7 +90,7 @@ int main (int argc, char** argv) {
 
 	setvbuf(stdout, NULL, _IONBF, 0);
 
-	spdlog::set_pattern("*** %^[%S.%f::%5l::%@:%!]%$: %v  ***");
+	spdlog::set_pattern("*** %^[%f::%5l::%s:%#:%!]%$: %v  ***");
 
 	char graph[100];
 	char meta[100];
@@ -101,6 +101,8 @@ int main (int argc, char** argv) {
     std::string iface = "wlan0";
     unsigned int port = 8000;
 	float thresh = 0.5;
+	bool rgb = false;
+	bool savePhoto = false;
 
 
 	if(argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
@@ -129,28 +131,34 @@ int main (int argc, char** argv) {
 					exit(1);
 				}
 				
-			}
+			} else
 			if(!strcmp(argv[i], "--iface")) {
 				iface = argv[i+1];
-			}
+			} else
 			if(!strcmp(argv[i], "--graph")) {
 				strcpy(graph, argv[i+1]);
-			}
+			} else
 			if(!strcmp(argv[i], "--meta")) {
 				strcpy(meta, argv[i+1]);
-			}
+			} else
 			if(!strcmp(argv[i], "--port")) {
 				port  = atoi(argv[i+1]);
-			}
+			} else
 			if(!strcmp(argv[i], "--thresh")) {
 				thresh  = atof(argv[i+1]);
-			}
+			} else
 			if(!strcmp(argv[i], "-v")) {
 				int l = atoi(argv[i+1]);
 				if(l < 0 || l > 6) log_level = spdlog::level::off;
 				else {
 					log_level = (spdlog::level::level_enum) l;
 				}
+			} else
+			if(!strcmp(argv[i], "--rgb")) {
+				rgb = true;
+			} else
+			if(!strcmp(argv[i], "--save-photo")) {
+				savePhoto = true;
 			}
 		}
 	}
@@ -167,6 +175,9 @@ int main (int argc, char** argv) {
 	HoloCoo coo(iface.c_str(), port);
 
     coo.init(graph, meta, thresh);
+    
+    coo.rgb = rgb;
+    coo.savePhoto = savePhoto;
 
     coo.run(port);
 
