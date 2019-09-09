@@ -482,7 +482,7 @@ int Coordinator::elaborate_ncs() {
 		expected = NCS_TODO;
 		if(inference_atomic.compare_exchange_strong(expected, NCS_DOING)) {
 			SPDLOG_DEBUG("Atomic: NCS_TODO -> NCS_DOING.");
-			nbboxes = ncs->inference_byte(mat_raw_resized.data, 5);
+			nbboxes = ncs->inference_byte(mat_raw_resized.data, 20);
 			SPDLOG_DEBUG("Inference done.");
 
 			

@@ -118,7 +118,7 @@ int main (int argc, char** argv) {
     const char *meta = "../data/yolov2/original/yolov2-tiny-original.meta";
     std::string iface = "wlan0";
     unsigned int port = 8001;
-	float thresh = 0.5;
+	float thresh = 0.7;
 	bool only_pi = false;
 	bool disable_ncs = false;
 

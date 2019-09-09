@@ -15,3 +15,6 @@ sudo apt -y install libvorbis-dev libxvidcore-dev
 sudo apt -y install libopencore-amrnb-dev libopencore-amrwb-dev
 sudo apt -y install libavresample-dev
 sudo apt -y install x264 v4l-utils
+
+cd build
+./gengi -v 0 --port 8000 --iface enp0s8 --thresh 0.7
