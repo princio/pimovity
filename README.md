@@ -16,3 +16,9 @@ Remember to check "allow unsafe code" for Unity VS project called Assmebly-C-Sha
 you get "Assembly-C-Sharp ... not found.".
 
 Bye
+
+ ## LINUX
+
+~/pimovity-holo/build
+
+ ./gengi -v 0 --port 56789 --iface enp0s8 --ale fe
