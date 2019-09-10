@@ -1,3 +1,0 @@
-/home/developer/pimovity/build/CMakeFiles/rebuild_cache.dir
-/home/developer/pimovity/build/CMakeFiles/edit_cache.dir
-/home/developer/pimovity/build/CMakeFiles/gengi.dir
