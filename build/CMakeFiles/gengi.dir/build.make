@@ -57,9 +57,57 @@ include CMakeFiles/gengi.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/gengi.dir/flags.make
 
+CMakeFiles/gengi.dir/src/coordinator.cpp.o: CMakeFiles/gengi.dir/flags.make
+CMakeFiles/gengi.dir/src/coordinator.cpp.o: ../src/coordinator.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/gengi.dir/src/coordinator.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/gengi.dir/src/coordinator.cpp.o -c /home/developer/pimovity/src/coordinator.cpp
+
+CMakeFiles/gengi.dir/src/coordinator.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/gengi.dir/src/coordinator.cpp.i"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/developer/pimovity/src/coordinator.cpp > CMakeFiles/gengi.dir/src/coordinator.cpp.i
+
+CMakeFiles/gengi.dir/src/coordinator.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/gengi.dir/src/coordinator.cpp.s"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/developer/pimovity/src/coordinator.cpp -o CMakeFiles/gengi.dir/src/coordinator.cpp.s
+
+CMakeFiles/gengi.dir/src/coordinator.cpp.o.requires:
+
+.PHONY : CMakeFiles/gengi.dir/src/coordinator.cpp.o.requires
+
+CMakeFiles/gengi.dir/src/coordinator.cpp.o.provides: CMakeFiles/gengi.dir/src/coordinator.cpp.o.requires
+	$(MAKE) -f CMakeFiles/gengi.dir/build.make CMakeFiles/gengi.dir/src/coordinator.cpp.o.provides.build
+.PHONY : CMakeFiles/gengi.dir/src/coordinator.cpp.o.provides
+
+CMakeFiles/gengi.dir/src/coordinator.cpp.o.provides.build: CMakeFiles/gengi.dir/src/coordinator.cpp.o
+
+
+CMakeFiles/gengi.dir/src/main.cpp.o: CMakeFiles/gengi.dir/flags.make
+CMakeFiles/gengi.dir/src/main.cpp.o: ../src/main.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/gengi.dir/src/main.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/gengi.dir/src/main.cpp.o -c /home/developer/pimovity/src/main.cpp
+
+CMakeFiles/gengi.dir/src/main.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/gengi.dir/src/main.cpp.i"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/developer/pimovity/src/main.cpp > CMakeFiles/gengi.dir/src/main.cpp.i
+
+CMakeFiles/gengi.dir/src/main.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/gengi.dir/src/main.cpp.s"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/developer/pimovity/src/main.cpp -o CMakeFiles/gengi.dir/src/main.cpp.s
+
+CMakeFiles/gengi.dir/src/main.cpp.o.requires:
+
+.PHONY : CMakeFiles/gengi.dir/src/main.cpp.o.requires
+
+CMakeFiles/gengi.dir/src/main.cpp.o.provides: CMakeFiles/gengi.dir/src/main.cpp.o.requires
+	$(MAKE) -f CMakeFiles/gengi.dir/build.make CMakeFiles/gengi.dir/src/main.cpp.o.provides.build
+.PHONY : CMakeFiles/gengi.dir/src/main.cpp.o.provides
+
+CMakeFiles/gengi.dir/src/main.cpp.o.provides.build: CMakeFiles/gengi.dir/src/main.cpp.o
+
+
 CMakeFiles/gengi.dir/src/ny2.cpp.o: CMakeFiles/gengi.dir/flags.make
 CMakeFiles/gengi.dir/src/ny2.cpp.o: ../src/ny2.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/gengi.dir/src/ny2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/gengi.dir/src/ny2.cpp.o"
 	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/gengi.dir/src/ny2.cpp.o -c /home/developer/pimovity/src/ny2.cpp
 
 CMakeFiles/gengi.dir/src/ny2.cpp.i: cmake_force
@@ -83,7 +131,7 @@ CMakeFiles/gengi.dir/src/ny2.cpp.o.provides.build: CMakeFiles/gengi.dir/src/ny2.
 
 CMakeFiles/gengi.dir/src/ncs.cpp.o: CMakeFiles/gengi.dir/flags.make
 CMakeFiles/gengi.dir/src/ncs.cpp.o: ../src/ncs.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/gengi.dir/src/ncs.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/gengi.dir/src/ncs.cpp.o"
 	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/gengi.dir/src/ncs.cpp.o -c /home/developer/pimovity/src/ncs.cpp
 
 CMakeFiles/gengi.dir/src/ncs.cpp.i: cmake_force
@@ -105,119 +153,40 @@ CMakeFiles/gengi.dir/src/ncs.cpp.o.provides: CMakeFiles/gengi.dir/src/ncs.cpp.o.
 CMakeFiles/gengi.dir/src/ncs.cpp.o.provides.build: CMakeFiles/gengi.dir/src/ncs.cpp.o
 
 
-CMakeFiles/gengi.dir/src/main.cpp.o: CMakeFiles/gengi.dir/flags.make
-CMakeFiles/gengi.dir/src/main.cpp.o: ../src/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/gengi.dir/src/main.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/gengi.dir/src/main.cpp.o -c /home/developer/pimovity/src/main.cpp
-
-CMakeFiles/gengi.dir/src/main.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/gengi.dir/src/main.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/developer/pimovity/src/main.cpp > CMakeFiles/gengi.dir/src/main.cpp.i
-
-CMakeFiles/gengi.dir/src/main.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/gengi.dir/src/main.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/developer/pimovity/src/main.cpp -o CMakeFiles/gengi.dir/src/main.cpp.s
-
-CMakeFiles/gengi.dir/src/main.cpp.o.requires:
-
-.PHONY : CMakeFiles/gengi.dir/src/main.cpp.o.requires
-
-CMakeFiles/gengi.dir/src/main.cpp.o.provides: CMakeFiles/gengi.dir/src/main.cpp.o.requires
-	$(MAKE) -f CMakeFiles/gengi.dir/build.make CMakeFiles/gengi.dir/src/main.cpp.o.provides.build
-.PHONY : CMakeFiles/gengi.dir/src/main.cpp.o.provides
-
-CMakeFiles/gengi.dir/src/main.cpp.o.provides.build: CMakeFiles/gengi.dir/src/main.cpp.o
-
-
-CMakeFiles/gengi.dir/src/coordinator.cpp.o: CMakeFiles/gengi.dir/flags.make
-CMakeFiles/gengi.dir/src/coordinator.cpp.o: ../src/coordinator.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/gengi.dir/src/coordinator.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/gengi.dir/src/coordinator.cpp.o -c /home/developer/pimovity/src/coordinator.cpp
-
-CMakeFiles/gengi.dir/src/coordinator.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/gengi.dir/src/coordinator.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/developer/pimovity/src/coordinator.cpp > CMakeFiles/gengi.dir/src/coordinator.cpp.i
-
-CMakeFiles/gengi.dir/src/coordinator.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/gengi.dir/src/coordinator.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/developer/pimovity/src/coordinator.cpp -o CMakeFiles/gengi.dir/src/coordinator.cpp.s
-
-CMakeFiles/gengi.dir/src/coordinator.cpp.o.requires:
-
-.PHONY : CMakeFiles/gengi.dir/src/coordinator.cpp.o.requires
-
-CMakeFiles/gengi.dir/src/coordinator.cpp.o.provides: CMakeFiles/gengi.dir/src/coordinator.cpp.o.requires
-	$(MAKE) -f CMakeFiles/gengi.dir/build.make CMakeFiles/gengi.dir/src/coordinator.cpp.o.provides.build
-.PHONY : CMakeFiles/gengi.dir/src/coordinator.cpp.o.provides
-
-CMakeFiles/gengi.dir/src/coordinator.cpp.o.provides.build: CMakeFiles/gengi.dir/src/coordinator.cpp.o
-
-
 # Object files for target gengi
 gengi_OBJECTS = \
-"CMakeFiles/gengi.dir/src/ny2.cpp.o" \
-"CMakeFiles/gengi.dir/src/ncs.cpp.o" \
+"CMakeFiles/gengi.dir/src/coordinator.cpp.o" \
 "CMakeFiles/gengi.dir/src/main.cpp.o" \
-"CMakeFiles/gengi.dir/src/coordinator.cpp.o"
+"CMakeFiles/gengi.dir/src/ny2.cpp.o" \
+"CMakeFiles/gengi.dir/src/ncs.cpp.o"
 
 # External object files for target gengi
 gengi_EXTERNAL_OBJECTS =
 
+gengi: CMakeFiles/gengi.dir/src/coordinator.cpp.o
+gengi: CMakeFiles/gengi.dir/src/main.cpp.o
 gengi: CMakeFiles/gengi.dir/src/ny2.cpp.o
 gengi: CMakeFiles/gengi.dir/src/ncs.cpp.o
-gengi: CMakeFiles/gengi.dir/src/main.cpp.o
-gengi: CMakeFiles/gengi.dir/src/coordinator.cpp.o
 gengi: CMakeFiles/gengi.dir/build.make
 gengi: /home/developer/spdlog/bin/lib/spdlog/libspdlog.a
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_gapi.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_stitching.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_freetype.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_fuzzy.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_bgsegm.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_stereo.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_aruco.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_img_hash.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_reg.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_saliency.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_surface_matching.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_line_descriptor.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_dpm.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_rgbd.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_dnn_objdetect.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_xobjdetect.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_hfs.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_face.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_bioinspired.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_hdf.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_ccalib.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_structured_light.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_xphoto.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_videostab.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_cvv.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_quality.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_tracking.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_xfeatures2d.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_superres.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_shape.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_datasets.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_text.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_plot.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_dnn.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_objdetect.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_highgui.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_phase_unwrapping.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_photo.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_ml.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_videoio.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_optflow.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_video.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_ximgproc.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_imgcodecs.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_calib3d.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_features2d.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_flann.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_imgproc.so.4.1.0
-gengi: /home/developer/opencvs/OpenCV-4.1.0/bin/lib/libopencv_core.so.4.1.0
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_videostab.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_ts.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_superres.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_stitching.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_ocl.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_gpu.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_contrib.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_photo.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_legacy.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_video.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_objdetect.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_ml.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_calib3d.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_features2d.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_highgui.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_imgproc.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_flann.so.2.4.9
+gengi: /usr/lib/x86_64-linux-gnu/libopencv_core.so.2.4.9
 gengi: CMakeFiles/gengi.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/developer/pimovity/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CXX executable gengi"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/gengi.dir/link.txt --verbose=$(VERBOSE)
@@ -227,10 +196,10 @@ CMakeFiles/gengi.dir/build: gengi
 
 .PHONY : CMakeFiles/gengi.dir/build
 
+CMakeFiles/gengi.dir/requires: CMakeFiles/gengi.dir/src/coordinator.cpp.o.requires
+CMakeFiles/gengi.dir/requires: CMakeFiles/gengi.dir/src/main.cpp.o.requires
 CMakeFiles/gengi.dir/requires: CMakeFiles/gengi.dir/src/ny2.cpp.o.requires
 CMakeFiles/gengi.dir/requires: CMakeFiles/gengi.dir/src/ncs.cpp.o.requires
-CMakeFiles/gengi.dir/requires: CMakeFiles/gengi.dir/src/main.cpp.o.requires
-CMakeFiles/gengi.dir/requires: CMakeFiles/gengi.dir/src/coordinator.cpp.o.requires
 
 .PHONY : CMakeFiles/gengi.dir/requires
 

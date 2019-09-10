@@ -7,10 +7,6 @@ set(CMAKE_DEPENDS_GENERATOR "Unix Makefiles")
 # The top level Makefile was generated from the following files:
 set(CMAKE_MAKEFILE_DEPENDS
   "CMakeCache.txt"
-  "/home/developer/opencvs/OpenCV-4.1.0/bin/lib/cmake/opencv4/OpenCVConfig-version.cmake"
-  "/home/developer/opencvs/OpenCV-4.1.0/bin/lib/cmake/opencv4/OpenCVConfig.cmake"
-  "/home/developer/opencvs/OpenCV-4.1.0/bin/lib/cmake/opencv4/OpenCVModules-release.cmake"
-  "/home/developer/opencvs/OpenCV-4.1.0/bin/lib/cmake/opencv4/OpenCVModules.cmake"
   "../CMakeLists.txt"
   "CMakeFiles/3.5.1/CMakeCCompiler.cmake"
   "CMakeFiles/3.5.1/CMakeCXXCompiler.cmake"
@@ -21,6 +17,10 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/home/developer/spdlog/bin/lib/spdlog/cmake/spdlogConfigTargets-release.cmake"
   "/home/developer/spdlog/bin/lib/spdlog/cmake/spdlogConfigTargets.cmake"
   "/home/developer/spdlog/bin/lib/spdlog/cmake/spdlogConfigVersion.cmake"
+  "/usr/share/OpenCV/OpenCVConfig-version.cmake"
+  "/usr/share/OpenCV/OpenCVConfig.cmake"
+  "/usr/share/OpenCV/OpenCVModules-release.cmake"
+  "/usr/share/OpenCV/OpenCVModules.cmake"
   "/usr/share/cmake-3.5/Modules/CMakeCCompiler.cmake.in"
   "/usr/share/cmake-3.5/Modules/CMakeCCompilerABI.c"
   "/usr/share/cmake-3.5/Modules/CMakeCInformation.cmake"

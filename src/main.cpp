@@ -14,7 +14,6 @@
 #include <errno.h>
 #include <time.h>
 
-
 #include <opencv2/opencv.hpp>
 // #include <opencv2/imgcodecs.hpp>
 // #include <opencv2/imgproc.hpp>
@@ -27,6 +26,14 @@
 #define CHECK(i) void(0);
 #endif
 
+
+const char *graph = "../data/yolov2/original/yolov2-tiny-original.graph";
+const char *meta = "../data/yolov2/original/yolov2-tiny-original.meta";
+std::string iface = "wlan0";
+unsigned int port = 8001;
+float thresh = 0.7;
+bool only_pi = false;
+bool disable_ncs = false;
 
 
 
@@ -64,6 +71,29 @@ int file2bytes2(const char *filename, char **buf, unsigned int *n_bytes) {
     SPDLOG_DEBUG("Done «file2bytes» ({} bytes).", has_read);
 	printf("##%p\n", (void*) *buf);
     return 0;
+}
+
+void printHelp() {
+
+	char temp[200];
+	getcwd(temp, sizeof(temp));
+
+	printf("\n\t--%-10s\tPort to which the socket is binded.", "port");
+	printf("\n\t\t\tDefault is «%d».", port);
+
+	printf("\n\n\t--%-10s\twlan0 or eth0.\n\t\t\tDefault is «%s».", "iface", iface.c_str());
+
+	printf("\n\n\t--%-10s\tThe path to the graph. Current working directory is «%s».", "graph", temp);
+	printf("\n\t\t\tDefault is «%s».", graph);
+
+	printf("\n\n\t--%-10s\tThe path to the meta file. Current working directory is «%s».", "meta", temp);
+	printf("\n\t\t\tDefault is «%s».", meta);
+
+	printf("\n\n\t--%-10s\tThe program will connect and exchange data only with Raspberry.", "only-pi");
+	printf("\n\t\t\tDefault is false.");
+
+	printf("\n\n\t--%-10s\tDisable all NCS operations. It sends empty packets to Unity.", "disable_ncs");
+	printf("\n\t\t\tDefault is false.\n\n");
 }
 
 
@@ -111,20 +141,12 @@ int main (int argc, char** argv) {
 
 	setvbuf(stdout, NULL, _IONBF, 0);
 
-	spdlog::set_pattern("*** %^[%S.%f::%5l::%@:%!]%$: %v  ***");
+	spdlog::set_pattern("%^[%5l][%S.%f::%s:%#:%!]%$: %v ");
 
-
-    const char *graph = "../data/yolov2/original/yolov2-tiny-original.graph";
-    const char *meta = "../data/yolov2/original/yolov2-tiny-original.meta";
-    std::string iface = "wlan0";
-    unsigned int port = 8001;
-	float thresh = 0.7;
-	bool only_pi = false;
-	bool disable_ncs = false;
 
 
 	if(argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
-		printf("HoloOj for Raspberry.\n\t--graph\t\t\tthe path to the graph file.\n\t--meta\t\t\tthe path to the meta file.\n\t--iface\t\t\tthe network interface to use.\n\t--help, -h\t\tthis help.\n");
+		printHelp();
 		exit(0);
 	}
 	auto log_level = spdlog::level::info;

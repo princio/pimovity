@@ -18,9 +18,9 @@ set(CMAKE_TARGET_DEFINITIONS_CXX
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
+  "/usr/include/opencv"
   "../include"
   "/home/developer/spdlog/bin/include"
-  "/home/developer/opencvs/OpenCV-4.1.0/bin/include/opencv4"
   )
 
 # Targets to which this target links.
