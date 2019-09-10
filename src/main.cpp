@@ -81,6 +81,9 @@ void printHelp() {
 	printf("\n\t--%-10s\tPort to which the socket is binded.", "port");
 	printf("\n\t\t\tDefault is «%d».", port);
 
+	printf("\n\t--%-10s\tSet NN threshold..", "thresh");
+	printf("\n\t\t\tDefault is «%g».", thresh);
+
 	printf("\n\n\t--%-10s\twlan0 or eth0.\n\t\t\tDefault is «%s».", "iface", iface.c_str());
 
 	printf("\n\n\t--%-10s\tThe path to the graph. Current working directory is «%s».", "graph", temp);
@@ -93,7 +96,10 @@ void printHelp() {
 	printf("\n\t\t\tDefault is false.");
 
 	printf("\n\n\t--%-10s\tDisable all NCS operations. It sends empty packets to Unity.", "disable_ncs");
-	printf("\n\t\t\tDefault is false.\n\n");
+	printf("\n\t\t\tDefault is false.");
+
+	printf("\n\n\t--%-10s\tSet verbose output. 0=No, 1=critical, 2=error, 3=warning, 4=info, 5=debug, 6=trace.", "verbose");
+	printf("\n\t\t\tDefault is 3.\n\n");
 }
 
 
@@ -149,7 +155,7 @@ int main (int argc, char** argv) {
 		printHelp();
 		exit(0);
 	}
-	auto log_level = spdlog::level::info;
+	auto log_level = spdlog::level::warn;
 	if(argc >= 3) {
 		for(int i = 1; i < argc; i++) {
 			if(!strcmp(argv[i], "--iface")) {
@@ -173,8 +179,8 @@ int main (int argc, char** argv) {
 			if(!strcmp(argv[i], "--thresh")) {
 				thresh  = atof(argv[i+1]);
 			}
-			if(!strcmp(argv[i], "-v")) {
-				int l = atoi(argv[i+1]);
+			if(!strcmp(argv[i], "--verbose")) {
+				int l = 6 - atoi(argv[i+1]);
 				if(l < 0 || l > 6) log_level = spdlog::level::off;
 				else {
 					log_level = (spdlog::level::level_enum) l;
@@ -184,11 +190,9 @@ int main (int argc, char** argv) {
 	}
 	spdlog::set_level(log_level);
 
-	printf("LOG LEVEL = %d\n", log_level);
 
-
-    printf("HoloOj for Raspberry:\n\t%6s = %s\n\t%6s = %u\n\t%6s = %s\n\t%6s = %s\t%6s = %s\n",
-	"iface", iface.c_str(), "port", port, "graph", graph, "meta", meta, "thresh", meta);
+    printf("Pimovity:\n\t%6s = %s\n\t%6s = %u\n\t%6s = %s\n\t%6s = %s\n\t%6s = %g\n",
+	"iface", iface.c_str(), "port", port, "graph", graph, "meta", meta, "thresh", thresh);
 
 
 	unsigned int nb;

@@ -204,7 +204,7 @@ int Coordinator::waitPiAndUy() {
 	
 				ncs->setSizes(roi.width, roi.height);
 				
-				SPDLOG_INFO("Connected to Pi: {}", caddr);
+				printf("Connected to Pi: %s", caddr);
 			} else {
 				SPDLOG_ERROR("Connected to Pi but received {} instead of 12 bytes.", r);
 				return -1;
@@ -212,7 +212,7 @@ int Coordinator::waitPiAndUy() {
 		} else {
 			REPORTSPD(id != 54, "Connected to some device but received wrong id ({}).", id);
 			REPORTSPD(r != 4, "Connected to Unity but received {} instead of 4 bytes.", r);
-			SPDLOG_INFO("Connected to Unity: {}", caddr);
+			printf("Connected to Unity: %s", caddr);
 			fd_uy = fd;
 		}
 	}
@@ -590,14 +590,14 @@ int Coordinator::recvImagesLoop() {
 		int expected = NCS_DONE;
 		if(disable_ncs) {
 			sl = send(fd_uy, &spacket, sizeof(SendPacket), 0);
-			SPDLOG_ERROR("Sent {} bytes to unity as bboxes.", sl);
+			SPDLOG_INFO("Sent {} bytes to unity as bboxes.", sl);
 		} else
 		if(inference_atomic.compare_exchange_weak(expected, NCS_DONE)) {
 			//sl = send(fd_uy, (void*) &spacket, sizeof(SendPacket), 0);
 			if(nbboxes > 0) {
 				spacket.n = nbboxes;
 				sl = send(fd_uy, &spacket, sizeof(SendPacket), 0);
-				SPDLOG_ERROR("Sent {} bytes to unity as bboxes.", sl);
+				SPDLOG_INFO("Sent {} bytes to unity as bboxes.", sl);
 			}
 			inference_atomic = NCS_NOT_DOING;
 			SPDLOG_DEBUG("Atomic: NCS_DONE -> NCS_NOT_DOING.");
@@ -648,7 +648,7 @@ int Coordinator::run(unsigned int port) {
 
 	SPDLOG_INFO("Starting server...");
 	if(startServer()) return -1;
-	SPDLOG_INFO("Waiting for Pi and Unity...");
+	printf("Waiting for Pi and Unity...");
 	ret = waitPiAndUy();
 	if(ret < 0) return -1;
 	
