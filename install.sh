@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SPDLOG_DIR="/home/developer/ooj/spdlog/"   #Y for installing, path to installation folder if installed
+SPDLOG_DIR="Y"   #Y for installing, path to installation folder if installed
 OPENCV4_DIR="Y"  #Y for installing, path to installation folder if installed
 
 function confirm() {

@@ -23,6 +23,13 @@
 #endif
 
 
+const char   *graph  =  "../data/yolov2/original/yolov2-tiny-original.graph";
+const char    *meta  =  "../data/yolov2/original/yolov2-tiny-original.meta";
+std::string   iface  =  "wlan0";
+unsigned int   port  =  8001;
+float        thresh  =  0.7;
+bool        only_pi  =  false;
+bool    disable_ncs  =  false;
 
 
 int file2bytes2(const char *filename, char **buf, unsigned int *n_bytes) {
@@ -86,6 +93,36 @@ bool file_exists (const char * name) {
     }   
 }
 
+
+void printHelp() {
+
+	char temp[200];
+	getcwd(temp, sizeof(temp));
+
+	printf("\n\t--%-10s\tPort to which the socket is binded.", "port");
+	printf("\n\t\t\tDefault is «%d».", port);
+
+	printf("\n\t--%-10s\tSet NN threshold..", "thresh");
+	printf("\n\t\t\tDefault is «%g».", thresh);
+
+	printf("\n\n\t--%-10s\twlan0 or eth0.\n\t\t\tDefault is «%s».", "iface", iface.c_str());
+
+	printf("\n\n\t--%-10s\tThe path to the graph. Current working directory is «%s».", "graph", temp);
+	printf("\n\t\t\tDefault is «%s».", graph);
+
+	printf("\n\n\t--%-10s\tThe path to the meta file. Current working directory is «%s».", "meta", temp);
+	printf("\n\t\t\tDefault is «%s».", meta);
+
+	printf("\n\n\t--%-10s\tChange to convert received photo to rgb color space instead that default bgr.", "rgb");
+	printf("\n\t\t\tDefault is false.");
+
+	printf("\n\n\t--%-10s\tSave received and decoded photo into ./phs folder as jpeg.", "save-photo");
+	printf("\n\t\t\tDefault is false.");
+
+	printf("\n\n\t--%-10s\tSet verbose output. 0=No, 1=critical, 2=error, 3=warning, 4=info, 5=debug, 6=trace.", "verbose");
+	printf("\n\t\t\tDefault is 3.\n\n");
+}
+
 int main (int argc, char** argv) {
 
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -106,7 +143,7 @@ int main (int argc, char** argv) {
 
 
 	if(argc == 2 && (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help"))) {
-		printf("HoloOj for Raspberry.\n\t--graph\t\t\tthe path to the graph file.\n\t--meta\t\t\tthe path to the meta file.\n\t--iface\t\t\tthe network interface to use.\n\t--help, -h\t\tthis help.\n");
+		printHelp();
 		exit(0);
 	}
 	auto log_level = spdlog::level::info;
@@ -147,8 +184,8 @@ int main (int argc, char** argv) {
 			if(!strcmp(argv[i], "--thresh")) {
 				thresh  = atof(argv[i+1]);
 			} else
-			if(!strcmp(argv[i], "-v")) {
-				int l = atoi(argv[i+1]);
+			if(!strcmp(argv[i], "--verbose")) {
+				int l = 6 - atoi(argv[i+1]);
 				if(l < 0 || l > 6) log_level = spdlog::level::off;
 				else {
 					log_level = (spdlog::level::level_enum) l;
@@ -164,11 +201,13 @@ int main (int argc, char** argv) {
 	}
 	spdlog::set_level(log_level);
 
-	printf("LOG LEVEL = %d\n", log_level);
 
-
-    printf("HoloOj for Raspberry:\n\t%6s = %s\n\t%6s = %u\n\t%6s = %s\n\t%6s = %s\t%6s = %s\n",
-	"iface", iface.c_str(), "port", port, "graph", graph, "meta", meta, "thresh", meta);
+    printf("HoloOj for Raspberry:");
+	printf("\n%18s:   %s", ".graph file path", graph);
+	printf("\n%18s:   %s", ".meta file path", meta);
+	printf("\n%18s:   %g", "thresh", thresh);
+	printf("\n%18s:   %s", "iface", iface.c_str());
+	printf("\n%18s:   %d\n\n", "port", port);
 
 
 	unsigned int nb;
