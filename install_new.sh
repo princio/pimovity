@@ -46,8 +46,7 @@ sudo apt install git build-essential cmake
 echo "Done."
 
 echo "Installing other packages..."
-sudo apt install -y libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev
-#libturbojpeg0-dev
+sudo apt install -y libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev libturbojpeg0-dev
 echo "Done."
 
 echo "Checking SPDLOG..."
