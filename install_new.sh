@@ -93,7 +93,7 @@ make
 cd $THIS_DIR
 
 git clone https://github.com/thtrieu/darkflow.git
-pip install cython
+pip3 install tensorflow cython opencv-python
 sed -i '121s/16/20/' darkflow/darkflow/utils/loader.py
 cd darkflow
-pip install .
+pip3 install .
