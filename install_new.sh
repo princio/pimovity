@@ -89,3 +89,11 @@ mkdir -p release
 cd release
 cmake -Dspdlog_DIR=$spdlog_DIR ..
 make
+
+cd $THIS_DIR
+
+git clone https://github.com/thtrieu/darkflow.git
+pip install cython
+sed -i '121s/16/20/' darkflow/darkflow/utils/loader.py
+cd darkflow
+pip install .
