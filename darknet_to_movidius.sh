@@ -38,6 +38,11 @@ fi
 
 flow --model $NAME.cfg --load $NAME.weights  --savepb
 
+cd built_graph
+
 export PYTHONPATH="${PYTHONPATH}:/opt/movidius/caffe/python"
 
 mvNCCompile $NAME.pb -s 12 -in input -on output -o $NAME.graph
+
+mv $NAME.graph ../../yolov2-tiny-$NAME.graph
+mv $NAME.meta ../../yolov2-tiny-$NAME.meta
