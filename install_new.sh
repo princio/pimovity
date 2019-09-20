@@ -113,3 +113,6 @@ pip3 install tensorflow cython opencv-python
 sed -i '121s/16/20/' darkflow/darkflow/utils/loader.py
 cd darkflow
 pip3 install .
+
+sudo -H pip3 uninstall scikit-image
+sudo -H pip3 install scikit-image
