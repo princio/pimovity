@@ -92,7 +92,7 @@ if [ `ldconfig -p | grep -n mvnc | wc -l` -lt 2 ]; then
 
 	git clone -b ncsdk2 http://github.com/Movidius/ncsdk
 	cd ncsdk
-	make api
+	make install
 	cd $THIS_DIR
 fi
 echo "NCSDK installed."
