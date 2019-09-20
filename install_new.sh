@@ -16,6 +16,22 @@ function confirm() {
     esac
 }
 
+
+
+# exec_and_search_errors - execute 1st argument and 1) check for error message
+#      related to network connectivity issues, then 2) check all other errors
+function exec_and_search_errors()
+{
+    # Execute the incoming command in $1
+    RC=0
+    $1 || RC=$?
+    if [ $RC -ne 0 ]; then
+        echo -e "Failed."
+        exit 128
+    fi
+    echo "Done."
+}
+
 # ask_sudo_permissions - 
 # Sets global variables: SUDO_PREFIX, PIP_PREFIX
 function ask_sudo_permissions()
@@ -37,17 +53,19 @@ THIS_DIR=`pwd`
 
 echo "Installing directory «${THIS_DIR}». Continue?"
 
-confirm || exit
+#confirm || exit
 
-sudo apt update
+echo "Apt updating..."
+exec_and_search_errors "sudo apt update"
+
 
 echo "Installing git and build-essential..."
-sudo apt install git build-essential cmake
-echo "Done."
+exec_and_search_errors "sudo apt install git build-essential cmake python3-pip"
 
+read
 echo "Installing other packages..."
-sudo apt install -y libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev libturbojpeg0-dev
-echo "Done."
+exec_and_search_errors "sudo apt install libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev libjpeg-turbo8-dev"
+read
 
 echo "Checking SPDLOG..."
 if [ $SPDLOG_DIR == "Y" ]; then
