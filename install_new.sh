@@ -62,10 +62,8 @@ exec_and_search_errors "sudo apt update"
 echo "Installing git and build-essential..."
 exec_and_search_errors "sudo apt install git build-essential cmake python3-pip"
 
-read
 echo "Installing other packages..."
 exec_and_search_errors "sudo apt install libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev libjpeg-turbo8-dev"
-read
 
 echo "Checking SPDLOG..."
 if [ $SPDLOG_DIR == "Y" ]; then
