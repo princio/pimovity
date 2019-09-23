@@ -18,12 +18,6 @@ if [ ! -f $FILE ]; then
     exit 1
 fi
 
-RET=`mkdir -p $NAME`
-if [[ $RET -gt 0 ]]; then
-    echo "mkdir failed."
-    exit 1
-fi
-
 RET=`unzip $NAME.zip -d $__PATH/$NAME`
 if [[ $RET -gt 0 ]]; then
     echo "Unzip failed."
@@ -48,6 +42,8 @@ fi
 flow --model $NAME.cfg --load $NAME.weights  --savepb
 
 export PYTHONPATH="${PYTHONPATH}:/opt/movidius/caffe/python"
+
+cd built_graph
 
 mvNCCompile $NAME.pb -s 12 -in input -on output -o $NAME.graph
 
