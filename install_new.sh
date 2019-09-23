@@ -60,10 +60,10 @@ exec_and_search_errors "sudo apt update"
 
 
 echo "Installing git and build-essential..."
-exec_and_search_errors "sudo apt install git build-essential cmake python3-pip"
+exec_and_search_errors "sudo apt install -y git build-essential cmake python3-pip"
 
 echo "Installing other packages..."
-exec_and_search_errors "sudo apt install libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev libjpeg-turbo8-dev"
+exec_and_search_errors "sudo apt install -y libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev libjpeg-turbo8-dev"
 
 echo "Checking SPDLOG..."
 if [ $SPDLOG_DIR == "Y" ]; then
@@ -99,20 +99,19 @@ echo "NCSDK installed."
 
 echo $spdlog_DIR
 
-git clone -b holooj2-rasp https://github.com/princio/pimovity
-cd pimovity
+#git clone -b holooj2-rasp https://github.com/princio/pimovity
+cd $THIS_DIR
 mkdir -p release
 cd release
 cmake -Dspdlog_DIR=$spdlog_DIR ..
 make
 
-cd $THIS_DIR
 
 git clone https://github.com/thtrieu/darkflow.git
-pip3 install tensorflow cython opencv-python
 sed -i '121s/16/20/' darkflow/darkflow/utils/loader.py
 cd darkflow
-pip3 install .
 
+sudo -H pip3 install tensorflow cython opencv-python
+sudo -H pip3 install .
 sudo -H pip3 uninstall scikit-image
 sudo -H pip3 install scikit-image
