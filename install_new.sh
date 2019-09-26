@@ -92,7 +92,7 @@ if [ `ldconfig -p | grep -n mvnc | wc -l` -lt 2 ]; then
 
 	git clone -b ncsdk2 http://github.com/Movidius/ncsdk
 	cd ncsdk
-	make install
+	make api
 	cd $THIS_DIR
 fi
 echo "NCSDK installed."
@@ -105,13 +105,3 @@ mkdir -p release
 cd release
 cmake -Dspdlog_DIR=$spdlog_DIR ..
 make
-
-
-git clone https://github.com/thtrieu/darkflow.git
-sed -i '121s/16/20/' darkflow/darkflow/utils/loader.py
-cd darkflow
-
-sudo -H pip3 install tensorflow cython opencv-python
-sudo -H pip3 install .
-sudo -H pip3 uninstall scikit-image
-sudo -H pip3 install scikit-image
