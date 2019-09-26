@@ -16,6 +16,22 @@ function confirm() {
     esac
 }
 
+
+
+# exec_and_search_errors - execute 1st argument and 1) check for error message
+#      related to network connectivity issues, then 2) check all other errors
+function exec_and_search_errors()
+{
+    # Execute the incoming command in $1
+    RC=0
+    $1 || RC=$?
+    if [ $RC -ne 0 ]; then
+        echo -e "Failed."
+        exit 128
+    fi
+    echo "Done."
+}
+
 # ask_sudo_permissions - 
 # Sets global variables: SUDO_PREFIX, PIP_PREFIX
 function ask_sudo_permissions()
@@ -33,19 +49,21 @@ function ask_sudo_permissions()
 
 ask_sudo_permissions
 
-cd ..
 THIS_DIR=`pwd`
-cd pimovity
 
 echo "Installing directory «${THIS_DIR}». Continue?"
 
-confirm || exit
+#confirm || exit
+
+echo "Apt updating..."
+exec_and_search_errors "sudo apt update"
 
 
-echo "Installing other..."
-sudo apt install -y libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev
-#libturbojpeg0-dev
-echo "installed."
+echo "Installing git and build-essential..."
+exec_and_search_errors "sudo apt install -y git build-essential cmake python3-pip"
+
+echo "Installing other packages..."
+exec_and_search_errors "sudo apt install -y libpthread-stubs0-dev libsystemd-dev libboost-dev libusb-1.0-0-dev libjpeg-turbo8-dev"
 
 echo "Checking SPDLOG..."
 if [ $SPDLOG_DIR == "Y" ]; then
@@ -60,7 +78,7 @@ if [ $SPDLOG_DIR == "Y" ]; then
 	cmake --build _build --target install
 	
 	SPDLOG_DIR=$THIS_DIR/spdlog
-	cd $THIS_DIR/pimovity
+	cd $THIS_DIR
 fi
 echo "SPDLOG installed."
 
@@ -74,14 +92,26 @@ if [ `ldconfig -p | grep -n mvnc | wc -l` -lt 2 ]; then
 
 	git clone -b ncsdk2 http://github.com/Movidius/ncsdk
 	cd ncsdk
-	make api
-	cd $THIS_DIR/pimovity
+	make install
+	cd $THIS_DIR
 fi
 echo "NCSDK installed."
 
 echo $spdlog_DIR
 
+#git clone -b holooj2-rasp https://github.com/princio/pimovity
+cd $THIS_DIR
 mkdir -p release
 cd release
 cmake -Dspdlog_DIR=$spdlog_DIR ..
 make
+
+
+git clone https://github.com/thtrieu/darkflow.git
+sed -i '121s/16/20/' darkflow/darkflow/utils/loader.py
+cd darkflow
+
+sudo -H pip3 install tensorflow cython opencv-python
+sudo -H pip3 install .
+sudo -H pip3 uninstall scikit-image
+sudo -H pip3 install scikit-image
