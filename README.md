@@ -1,35 +1,36 @@
-# Configurations
+# Getting started
 
-##LINUX
+## On Linux
 
-###SPDLOG
+### Requirements
 
-’’’
-mkdir spdlog && cd spdlog
+Spdlog:
+```
+$ mkdir spdlog && cd spdlog
 
-mkdir release
+$ mkdir release
 
-git clone https://github.com/gabime/spdlog.git
+$ git clone https://github.com/gabime/spdlog.git
 
-cd spdlog
+$ cd spdlog
 
-mkdir build
+$ mkdir build
 
-cmake -H. -B build -DCMAKE_INSTALL_PREFIX=../release -DCMAKE_BUILD_TYPE=Release
+$ cmake -H. -B build -DCMAKE_INSTALL_PREFIX=../release -DCMAKE_BUILD_TYPE=Release
 
-cmake --build build --target install
-’’’
+$ cmake --build build --target install
+```
 
 Other requirements:
 
-’’’
-sudo apt install libpthread-stubs0-dev libsystemd-dev libboost-dev libturbojpeg0-dev libusb-1.0-0-dev
+```
+$ sudo apt install libpthread-stubs0-dev libsystemd-dev libboost-dev libturbojpeg0-dev libusb-1.0-0-dev
 
-git clone -b ncsdk2 http://github.com/Movidius/ncsdk && cd ncsdk && make api
-’’’
+$ git clone -b ncsdk2 http://github.com/Movidius/ncsdk && cd ncsdk && make api
+```
 
 
-## WINDOWS
+## On Windows
 
 
 New Unity Project with Unity 2017.4.20f2.
@@ -44,5 +45,3 @@ Build settings -> Add scene WithUI -> check C# project -> Build.
 
 Remember to check "allow unsafe code" for Unity VS project called Assmebly-C-Sharp or something like that. Otherwise 
 you get "Assembly-C-Sharp ... not found.".
-
-Bye
